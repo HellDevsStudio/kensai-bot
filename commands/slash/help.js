@@ -82,6 +82,7 @@ const CATEGORIAS = {
             '`/embed` - Formulário de anúncio',
             '`/dm` - Notificação direta da loja',
             '`/addemoji` - Adiciona emoji',
+            '`/addsticker` - Cria figurinha (sticker)',
             '`/sorteio` - Sistema de sorteios'
         ]
     }
