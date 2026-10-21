@@ -1,4 +1,5 @@
 const { Events, MessageFlags } = require('discord.js');
+const { criarEmbedErro } = require('../utils/embeds');
 
 module.exports = {
     name: Events.InteractionCreate,
@@ -16,7 +17,8 @@ module.exports = {
             await command.execute(interaction, client);
         } catch (error) {
             console.error(`❌ Erro ao executar o comando /${interaction.commandName}:`, error);
-            const erroMsg = { content: '❌ Ocorreu um erro ao processar este comando.', flags: [MessageFlags.Ephemeral] };
+            const embedErro = criarEmbedErro('Erro na Execução', 'Ocorreu um erro ao processar este comando. Tente novamente mais tarde.');
+            const erroMsg = { embeds: [embedErro], flags: [MessageFlags.Ephemeral] };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {
