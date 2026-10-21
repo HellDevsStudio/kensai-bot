@@ -1,37 +1,44 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { criarEmbedPadrao, criarEmbedErro } = require('../../utils/embeds');
+const { getRoleplayGif } = require('../../utils/gifHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('highfive')
-        .setDescription('Ação social de highfive.')
-        .addUserOption(opt => opt.setName('alvo').setDescription('Quem deseja interagir?').setRequired(true)),
+        .setDescription('Toca aqui / highfive com um amigo com GIF animado!')
+        .addUserOption(opt => opt.setName('alvo').setDescription('Quem você quer cumprimentar?').setRequired(true)),
     async execute(interaction) {
         const alvo = interaction.options.getUser('alvo');
         if (alvo.id === interaction.user.id) {
             return interaction.reply({
-                embeds: [criarEmbedErro('Ação Inválida', 'Você não pode usar esta ação em você mesmo!')],
-                ephemeral: true
+                embeds: [criarEmbedErro('Ação Inválida', 'Você não pode tocar aqui com você mesmo!')],
+                flags: [MessageFlags.Ephemeral]
             });
         }
 
-        const embed = criarEmbedPadrao()
-            .setDescription(`✋ **<@${interaction.user.id}>** tocou aqui com **<@${alvo.id}>**!`)
-            .setImage('https://media.giphy.com/media/3oEjHV0z8S7WM4MwnK/giphy.gif');
+        const gifUrl = await getRoleplayGif('highfive');
+
+        const embed = criarEmbedPadrao('✋ Toca Aqui! High Five!')
+            .setDescription('✋ **<@' + interaction.user.id + '>** tocou aqui com **<@' + alvo.id + '>**!')
+            .setImage(gifUrl)
+            .setFooter({ text: 'Interação de ' + interaction.user.username, iconURL: interaction.user.displayAvatarURL() });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('rp_retribuir_highfive_' + interaction.user.id + '_' + alvo.id)
-                .setLabel('🔄 Retribuir')
+                .setLabel('🔄 Tocar de Volta')
                 .setStyle(ButtonStyle.Primary)
         );
 
         await interaction.reply({ embeds: [embed], components: [row] });
     },
     async executeRetribuir(interaction, originalAuthorId) {
-        const embed = criarEmbedPadrao()
-            .setDescription(`✋ **<@${interaction.user.id}>** retribuiu e tocou aqui com **<@${originalAuthorId}>** de volta!`)
-            .setImage('https://media.giphy.com/media/3oEjHV0z8S7WM4MwnK/giphy.gif');
+        const gifUrl = await getRoleplayGif('highfive');
+
+        const embed = criarEmbedPadrao('✋ High Five Retribuído!')
+            .setDescription('✋ **<@' + interaction.user.id + '>** retribuiu e tocou aqui com **<@' + originalAuthorId + '>** de volta!')
+            .setImage(gifUrl)
+            .setFooter({ text: 'Retribuído por ' + interaction.user.username, iconURL: interaction.user.displayAvatarURL() });
 
         await interaction.reply({ embeds: [embed] });
     }

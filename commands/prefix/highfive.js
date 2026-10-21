@@ -1,23 +1,28 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { criarEmbedPadrao, criarEmbedErro } = require('../../utils/embeds');
+const { getRoleplayGif } = require('../../utils/gifHelper');
 
 module.exports = {
     name: 'highfive',
-    description: 'Ação de highfive.',
+    aliases: ['tocaqui', 'toca_aqui', 'toca'],
+    description: 'Toca aqui / highfive com um amigo com GIF animado.',
     async execute(message, args) {
         const alvo = message.mentions.users.first();
         if (!alvo || alvo.id === message.author.id) {
             return message.reply({ embeds: [criarEmbedErro('Uso Correto', 'Mencione alguém diferente de você: `k!highfive @usuario`')] });
         }
 
-        const embed = criarEmbedPadrao()
-            .setDescription(`✋ **<@${message.author.id}>** tocou aqui com **<@${alvo.id}>**!`)
-            .setImage('https://media.giphy.com/media/3oEjHV0z8S7WM4MwnK/giphy.gif');
+        const gifUrl = await getRoleplayGif('highfive');
+
+        const embed = criarEmbedPadrao('✋ Toca Aqui! High Five!')
+            .setDescription('✋ **<@' + message.author.id + '>** tocou aqui com **<@' + alvo.id + '>**!')
+            .setImage(gifUrl)
+            .setFooter({ text: 'Interação de ' + message.author.username, iconURL: message.author.displayAvatarURL() });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('rp_retribuir_highfive_' + message.author.id + '_' + alvo.id)
-                .setLabel('🔄 Retribuir')
+                .setLabel('🔄 Tocar de Volta')
                 .setStyle(ButtonStyle.Primary)
         );
 

@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { criarEmbedPadrao, criarEmbedErro } = require('../../utils/embeds');
+const { getRoleplayGif } = require('../../utils/gifHelper');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,13 +12,16 @@ module.exports = {
         if (alvo.id === interaction.user.id) {
             return interaction.reply({
                 embeds: [criarEmbedErro('Ação Inválida', 'Você não pode usar esta ação em você mesmo!')],
-                ephemeral: true
+                flags: [MessageFlags.Ephemeral]
             });
         }
 
-        const embed = criarEmbedPadrao()
-            .setDescription(`⚔️ **<@${interaction.user.id}>** deu um golpe em **<@${alvo.id}>**!`)
-            .setImage('https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif');
+        const gifUrl = await getRoleplayGif('slap');
+
+        const embed = criarEmbedPadrao('💥 Tapa na Cara!')
+            .setDescription('💥 **<@' + interaction.user.id + '>** deu um tapa em **<@' + alvo.id + '>**!')
+            .setImage(gifUrl)
+            .setFooter({ text: 'Interação de ' + interaction.user.username, iconURL: interaction.user.displayAvatarURL() });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
@@ -29,9 +33,12 @@ module.exports = {
         await interaction.reply({ embeds: [embed], components: [row] });
     },
     async executeRetribuir(interaction, originalAuthorId) {
-        const embed = criarEmbedPadrao()
-            .setDescription(`⚔️ **<@${interaction.user.id}>** retribuiu e deu um golpe em **<@${originalAuthorId}>** de volta!`)
-            .setImage('https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif');
+        const gifUrl = await getRoleplayGif('slap');
+
+        const embed = criarEmbedPadrao('💥 Retribuição!')
+            .setDescription('💥 **<@' + interaction.user.id + '>** retribuiu e deu um tapa em **<@' + originalAuthorId + '>** de volta!')
+            .setImage(gifUrl)
+            .setFooter({ text: 'Retribuído por ' + interaction.user.username, iconURL: interaction.user.displayAvatarURL() });
 
         await interaction.reply({ embeds: [embed] });
     }

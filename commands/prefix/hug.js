@@ -1,5 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { criarEmbedPadrao, criarEmbedErro } = require('../../utils/embeds');
+const { getRoleplayGif } = require('../../utils/gifHelper');
 
 module.exports = {
     name: 'hug',
@@ -10,9 +11,12 @@ module.exports = {
             return message.reply({ embeds: [criarEmbedErro('Uso Correto', 'Mencione alguém diferente de você: `k!hug @usuario`')] });
         }
 
-        const embed = criarEmbedPadrao()
-            .setDescription(`🤗 **<@${message.author.id}>** abraçou **<@${alvo.id}>**!`)
-            .setImage('https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif');
+        const gifUrl = await getRoleplayGif('hug');
+
+        const embed = criarEmbedPadrao('🤗 Um Abraço Quentinho!')
+            .setDescription('🤗 **<@' + message.author.id + '>** abraçou **<@' + alvo.id + '>**!')
+            .setImage(gifUrl)
+            .setFooter({ text: 'Interação de ' + message.author.username, iconURL: message.author.displayAvatarURL() });
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
