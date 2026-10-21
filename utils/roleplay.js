@@ -1,12 +1,12 @@
 /**
  * roleplay.js
- * Módulo centralizado de frases dinâmicas e gerenciamento de ações sociais/roleplay.
- * Suporta múltiplos comandos em Português e Inglês com frases aleatórias sem repetição de títulos.
+ * Módulo centralizado de frases dinâmicas, contador de interações e ações de roleplay.
  */
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { criarEmbedPadrao, criarEmbedErro } = require('./embeds');
 const { getRoleplayGif } = require('./gifHelper');
+const { readData, writeData } = require('./db');
 
 const ACTION_MAP = {
     abracar: 'hug',
@@ -20,6 +20,14 @@ const ACTION_MAP = {
     pat: 'pat',
     tocaaqui: 'highfive',
     highfive: 'highfive'
+};
+
+const ACTION_VERBS = {
+    hug: 'já abraçou',
+    kiss: 'já beijou',
+    slap: 'já deu um tapa em',
+    pat: 'já fez cafuné em',
+    highfive: 'já tocou aqui com'
 };
 
 const FRASES = {
@@ -101,6 +109,56 @@ function getRandomPhrase(action, authorId, targetId, isRetribuir) {
     return tpl.replace('{author}', authorId).replace('{target}', targetId);
 }
 
+function recordAndGetCounter(action, authorId, targetId) {
+    const stats = readData('roleplay_stats', {});
+    const key = authorId + '_' + targetId + '_' + action;
+    const current = (stats[key] || 0) + 1;
+    stats[key] = current;
+    writeData('roleplay_stats', stats);
+
+    const vezes = current === 1 ? '1 vez' : current + ' vezes';
+
+    if (action === 'highfive') {
+        return '✋ *<@' + authorId + '> e <@' + targetId + '> já mandaram aquele High Five **' + vezes + '**!*';
+    }
+    if (action === 'slap') {
+        return '💥 *<@' + authorId + '> já deu um tapa em <@' + targetId + '> **' + vezes + '**!*';
+    }
+    if (action === 'kiss') {
+        return '💋 *<@' + authorId + '> já beijou <@' + targetId + '> **' + vezes + '**!*';
+    }
+    if (action === 'hug') {
+        return '🫂 *<@' + authorId + '> já abraçou <@' + targetId + '> **' + vezes + '**!*';
+    }
+    if (action === 'pat') {
+        return '💆 *<@' + authorId + '> já fez cafuné em <@' + targetId + '> **' + vezes + '**!*';
+    }
+
+    const verb = ACTION_VERBS[action] || 'já interagiu com';
+    return '📊 *<@' + authorId + '> ' + verb + ' <@' + targetId + '> **' + vezes + '**!*';
+}
+
+function getPairSummary(u1, u2) {
+    const stats = readData('roleplay_stats', {});
+    const actions = [
+        { key: 'hug', icon: '🫂', name: 'Abraços' },
+        { key: 'kiss', icon: '💋', name: 'Beijos' },
+        { key: 'slap', icon: '💥', name: 'Tapas' },
+        { key: 'pat', icon: '💆', name: 'Cafunés' },
+        { key: 'highfive', icon: '✋', name: 'High Fives' }
+    ];
+
+    const lines = actions.map(function(act) {
+        const from1to2 = stats[u1 + '_' + u2 + '_' + act.key] || 0;
+        const from2to1 = stats[u2 + '_' + u1 + '_' + act.key] || 0;
+        const total = from1to2 + from2to1;
+        return act.icon + ' **' + act.name + ':** ' + total + ' no total' +
+            '\n   ↳ <@' + u1 + '>: ' + from1to2 + ' • <@' + u2 + '>: ' + from2to1;
+    });
+
+    return lines.join('\n\n');
+}
+
 async function executeRoleplaySlash(interaction, action) {
     const alvo = interaction.options.getUser('alvo');
     if (!alvo || alvo.id === interaction.user.id) {
@@ -112,10 +170,11 @@ async function executeRoleplaySlash(interaction, action) {
 
     const canonical = ACTION_MAP[action] || 'highfive';
     const frase = getRandomPhrase(canonical, interaction.user.id, alvo.id, false);
+    const counterText = recordAndGetCounter(canonical, interaction.user.id, alvo.id);
     const gifUrl = await getRoleplayGif(canonical);
 
     const embed = criarEmbedPadrao()
-        .setDescription(frase)
+        .setDescription(frase + '\n\n' + counterText)
         .setImage(gifUrl)
         .setFooter({ text: 'Interação de ' + interaction.user.username, iconURL: interaction.user.displayAvatarURL() });
 
@@ -132,10 +191,11 @@ async function executeRoleplaySlash(interaction, action) {
 async function executeRoleplayRetribuir(interaction, originalAuthorId, action) {
     const canonical = ACTION_MAP[action] || 'highfive';
     const frase = getRandomPhrase(canonical, interaction.user.id, originalAuthorId, true);
+    const counterText = recordAndGetCounter(canonical, interaction.user.id, originalAuthorId);
     const gifUrl = await getRoleplayGif(canonical);
 
     const embed = criarEmbedPadrao()
-        .setDescription(frase)
+        .setDescription(frase + '\n\n' + counterText)
         .setImage(gifUrl)
         .setFooter({ text: 'Retribuído por ' + interaction.user.username, iconURL: interaction.user.displayAvatarURL() });
 
@@ -152,10 +212,11 @@ async function executeRoleplayPrefix(message, action, args) {
 
     const canonical = ACTION_MAP[action] || 'highfive';
     const frase = getRandomPhrase(canonical, message.author.id, alvo.id, false);
+    const counterText = recordAndGetCounter(canonical, message.author.id, alvo.id);
     const gifUrl = await getRoleplayGif(canonical);
 
     const embed = criarEmbedPadrao()
-        .setDescription(frase)
+        .setDescription(frase + '\n\n' + counterText)
         .setImage(gifUrl)
         .setFooter({ text: 'Interação de ' + message.author.username, iconURL: message.author.displayAvatarURL() });
 
@@ -174,6 +235,8 @@ module.exports = {
     FRASES,
     RETRIBUIR_FRASES,
     getRandomPhrase,
+    recordAndGetCounter,
+    getPairSummary,
     executeRoleplaySlash,
     executeRoleplayRetribuir,
     executeRoleplayPrefix
