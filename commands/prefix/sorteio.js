@@ -55,12 +55,12 @@ module.exports = {
         );
 
         const embed = criarEmbedPadrao('🎉 SORTEIO KENSAI STORE 🎉')
-            .setDescription(`Clique no botão abaixo para concorrer a **${premio}**!\\n\\n` +
-                `🎁 **Prêmio:** ${premio}\\n` +
-                `👑 **Patrocinador:** ${message.author}\\n` +
-                `🏆 **Ganhadores:** ${winnersCount}\\n` +
-                `⏰ **Encerra em:** <t:${Math.floor(endsAt / 1000)}:R> (<t:${Math.floor(endsAt / 1000)}:f>)\\n` +
-                `👥 **Participantes:** 0\\n\\n` +
+            .setDescription(`Clique no botão abaixo para concorrer a **${premio}**!\n\n` +
+                `🎁 **Prêmio:** ${premio}\n` +
+                `👑 **Patrocinador:** ${message.author}\n` +
+                `🏆 **Ganhadores:** ${winnersCount}\n` +
+                `⏰ **Encerra em:** <t:${Math.floor(endsAt / 1000)}:R> (<t:${Math.floor(endsAt / 1000)}:f>)\n` +
+                `👥 **Participantes:** 0\n\n` +
                 `*ID do Sorteio: ${giveId}*`
             );
 

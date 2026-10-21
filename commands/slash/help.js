@@ -56,11 +56,11 @@ const CATEGORIAS = {
         nome: '🎭 Roleplay & Social',
         descricao: 'Comandos de interação social entre amigos.',
         comandos: [
-            '`/hug` - Abraçar alguém',
-            '`/slap` - Dar um golpe em alguém',
-            '`/pat` - Fazer cafuné',
-            '`/kiss` - Dar um beijo',
-            '`/highfive` - Tocar aqui'
+            '`/abracar` (ou `/hug`) - Dá um abraço quentinho',
+            '`/beijar` (ou `/kiss`) - Dá um beijo carinhoso',
+            '`/tapa` (ou `/slap`) - Dá um tapa/bofetada',
+            '`/cafune` / `/carinho` (ou `/pat`) - Faz cafuné na cabeça',
+            '`/tocaaqui` (ou `/highfive`) - Toca aqui / High Five'
         ]
     },
     staff: {

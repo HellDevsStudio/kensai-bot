@@ -55,12 +55,12 @@ module.exports = {
             );
 
             const embed = criarEmbedPadrao('🎉 SORTEIO KENSAI STORE 🎉')
-                .setDescription(`Clique no botão abaixo para concorrer a **${premio}**!\\n\\n` +
-                    `🎁 **Prêmio:** ${premio}\\n` +
-                    `👑 **Patrocinador:** ${interaction.user}\\n` +
-                    `🏆 **Ganhadores:** ${winnersCount}\\n` +
-                    `⏰ **Encerra em:** <t:${Math.floor(endsAt / 1000)}:R> (<t:${Math.floor(endsAt / 1000)}:f>)\\n` +
-                    `👥 **Participantes:** 0\\n\\n` +
+                .setDescription(`Clique no botão abaixo para concorrer a **${premio}**!\n\n` +
+                    `🎁 **Prêmio:** ${premio}\n` +
+                    `👑 **Patrocinador:** ${interaction.user}\n` +
+                    `🏆 **Ganhadores:** ${winnersCount}\n` +
+                    `⏰ **Encerra em:** <t:${Math.floor(endsAt / 1000)}:R> (<t:${Math.floor(endsAt / 1000)}:f>)\n` +
+                    `👥 **Participantes:** 0\n\n` +
                     `*ID do Sorteio: ${giveId}*`
                 );
 
@@ -103,7 +103,7 @@ module.exports = {
                         const winnerMentions = winners.length > 0 ? winners.map(w => `<@${w}>`).join(', ') : 'Nenhum participante';
 
                         const finalEmbed = criarEmbedPadrao('🎉 SORTEIO ENCERRADO 🎉')
-                            .setDescription(`**${s.prize}**\\n\\n👑 **Patrocinador:** <@${s.sponsorId}>\\n🏆 **Vencedor(es):** ${winnerMentions}\\n👥 **Total de Participantes:** ${participants.length}`);
+                            .setDescription(`**${s.prize}**\n\n👑 **Patrocinador:** <@${s.sponsorId}>\n🏆 **Vencedor(es):** ${winnerMentions}\n👥 **Total de Participantes:** ${participants.length}`);
 
                         if (targetMsg) {
                             await targetMsg.edit({ embeds: [finalEmbed], components: [] }).catch(() => {});
