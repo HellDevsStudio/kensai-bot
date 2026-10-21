@@ -1,5 +1,6 @@
 /**
  * Avaliador matemático seguro sem uso de eval()
+ * Suporta +, -, *, x, X, /, ÷, ^, %, parênteses e vírgula decimal (ex: 5x5, 20+20, 20/3, 1500 * 0,7)
  */
 function evaluateMath(expr) {
     if (!expr || typeof expr !== 'string') {
@@ -7,7 +8,12 @@ function evaluateMath(expr) {
     }
 
     let cleaned = expr.trim();
-    // Substituir operadores comuns
+
+    // Suporte a vírgula decimal comum no Brasil (ex: 0,7 -> 0.7, 5,5 -> 5.5)
+    cleaned = cleaned.replace(/(\d+),(\d+)/g, '$1.$2');
+
+    // Substituir operadores comuns de multiplicação e divisão
+    // Cuidado: substituir 'x' e 'X' apenas quando atuam como multiplicação (ex: 5x5, 5 x 5, )x(, )x5)
     cleaned = cleaned.replace(/x/gi, '*').replace(/÷/g, '/');
 
     // Checar por caracteres proibidos

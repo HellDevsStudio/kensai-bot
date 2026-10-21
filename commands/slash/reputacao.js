@@ -15,16 +15,16 @@ module.exports = {
         const totalReviews = userRep.reviews.length;
         const media = totalReviews > 0 ? (userRep.points / totalReviews).toFixed(1) : '5.0';
 
-        const embed = criarEmbedPadrao(`⭐ Ficha de Reputação — ${target.username}`)
+        const embed = criarEmbedPadrao('⭐ Ficha de Reputação — ' + target.username)
             .setThumbnail(target.displayAvatarURL())
             .addFields(
-                { name: '🏆 Pontos Totais', value: ```${userRep.points} pts```, inline: true },
-                { name: '📊 Total de Avaliações', value: ```${totalReviews} avaliações```, inline: true },
-                { name: '⭐ Média Geral', value: ```${media} / 5.0```, inline: true }
+                { name: '🏆 Pontos Totais', value: '`' + userRep.points + ' pts`', inline: true },
+                { name: '📊 Total de Avaliações', value: '`' + totalReviews + ' avaliações`', inline: true },
+                { name: '⭐ Média Geral', value: '`' + media + ' / 5.0`', inline: true }
             );
 
         if (totalReviews > 0) {
-            const ultimas = userRep.reviews.slice(-3).reverse().map(r => `⭐ **${r.nota}/5** por <@${r.authorId}>: *"${r.comentario}"*`).join('\n');
+            const ultimas = userRep.reviews.slice(-3).reverse().map(r => '⭐ **' + r.nota + '/5** por <@' + r.authorId + '>: *"' + r.comentario + '"*').join('\n');
             embed.addFields({ name: 'Últimos Depoimentos', value: ultimas });
         } else {
             embed.setDescription('Este membro ainda não possui avaliações registradas.');
