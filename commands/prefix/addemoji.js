@@ -29,7 +29,7 @@ module.exports = {
         try {
             const emoji = await message.guild.emojis.create({ attachment: url, name: nome });
             const embed = criarEmbedPadrao('✨ Emoji Adicionado com Sucesso!')
-                .setThumbnail(emoji.url)
+                .setThumbnail(emoji.imageURL())
                 .setDescription('O emoji ' + emoji.toString() + ' (`:' + emoji.name + ':`) foi adicionado por ' + message.author.toString() + '.');
 
             message.reply({ embeds: [embed] });

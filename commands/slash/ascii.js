@@ -1,5 +1,4 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { criarEmbedErro } = require('../../utils/embeds');
 
 const ASCII_MAP = {
     'A': [' █▀█ ', ' █▀█ '], 'B': [' █▀▄ ', ' █▄▀ '], 'C': [' █▀▀ ', ' █▄▄ '],
@@ -10,7 +9,11 @@ const ASCII_MAP = {
     'P': [' █▀█ ', ' █▀▀ '], 'Q': [' █▀█ ', ' ▀▀█ '], 'R': [' █▀█ ', ' █▀▄ '],
     'S': [' █▀▀ ', ' ▄▄█ '], 'T': [' ▀█▀ ', '  █  '], 'U': [' █ █ ', ' █▄█ '],
     'V': [' █ █ ', '  ▀  '], 'W': [' █ █ █ ', ' ▀▄▀▄▀ '], 'X': [' ▀▄▀ ', ' █ █ '],
-    'Y': [' ▀▄▀ ', '  █  '], 'Z': [' ▀▀█ ', ' █▄▄ '], ' ': ['   ', '   ']
+    'Y': [' ▀▄▀ ', '  █  '], 'Z': [' ▀▀█ ', ' █▄▄ '], ' ': ['   ', '   '],
+    '0': [' █▀█ ', ' █▄█ '], '1': ['  █  ', '  █  '], '2': [' ▀▀█ ', ' █▄▄ '],
+    '3': [' ▀▀█ ', ' ▄▄█ '], '4': [' █ █ ', ' ▀▀█ '], '5': [' █▀▀ ', ' ▄▄█ '],
+    '6': [' █▀▀ ', ' █▄█ '], '7': [' ▀▀█ ', '   █ '], '8': [' █▀█ ', ' █▄█ '],
+    '9': [' █▀█ ', ' ▀▀█ '], '!': [' █ ', ' ▄ '], '?': [' ▀█ ', '  ▄ ']
 };
 
 module.exports = {
@@ -29,10 +32,8 @@ module.exports = {
             line2 += art[1];
         }
 
-        const banner = ```
-${line1}
-${line2}
-```;
-        await interaction.reply(banner);
+        const ticks = String.fromCharCode(96, 96, 96);
+        const banner = ticks + '\n' + line1 + '\n' + line2 + '\n' + ticks;
+        await interaction.reply({ content: banner });
     }
 };

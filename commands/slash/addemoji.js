@@ -27,11 +27,11 @@ module.exports = {
         try {
             const emoji = await interaction.guild.emojis.create({ attachment: url, name: nome });
             const embed = criarEmbedPadrao('✨ Emoji Adicionado com Sucesso!')
-                .setThumbnail(emoji.url)
+                .setThumbnail(emoji.imageURL())
                 .setDescription('O emoji ' + emoji.toString() + ' (`:' + emoji.name + ':`) foi adicionado por ' + interaction.user.toString() + '.')
                 .addFields(
                     { name: '🆔 ID do Emoji', value: emoji.id, inline: true },
-                    { name: '🔗 Link', value: '[Abrir Imagem](' + emoji.url + ')', inline: true }
+                    { name: '🔗 Link', value: '[Abrir Imagem](' + emoji.imageURL() + ')', inline: true }
                 );
 
             await interaction.reply({ embeds: [embed] });
