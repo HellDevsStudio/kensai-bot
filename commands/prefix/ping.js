@@ -1,22 +1,20 @@
-const { EmbedBuilder } = require('discord.js');
-const config = require('../../config');
+const { criarEmbedPadrao } = require('../../utils/embeds');
+const { formatDuration } = require('../../utils/timeParser');
 
 module.exports = {
     name: 'ping',
-    description: 'Verifica a latência do bot.',
+    description: 'Mede a velocidade de resposta do bot e da API do Discord.',
     async execute(message, args, client) {
         const sent = await message.channel.send('🏓 Calculando...');
         const botLatency = Math.max(1, sent.createdTimestamp - message.createdTimestamp);
-        const apiLatency = Math.round(client.ws.ping);
+        const wsLatency = Math.round(client.ws.ping);
+        const uptime = formatDuration(client.uptime);
 
-        const embed = new EmbedBuilder()
-            .setColor(config.EMBED_COLOR)
-            .setTitle('🏓 Pong!')
+        const embed = criarEmbedPadrao('🏓 Pong!')
             .addFields(
-                { name: '⚡ Latência do Bot', value: `\`${botLatency}ms\``, inline: true },
-                { name: '🌐 Latência da API', value: `\`${apiLatency}ms\``, inline: true }
-            )
-            .setTimestamp();
+                { name: '⚡ Latência WebSocket', value: `\`${wsLatency >= 0 ? wsLatency : botLatency}ms\``, inline: true },
+                { name: '⏱️ Uptime', value: `\`${uptime}\``, inline: true }
+            );
 
         await sent.edit({ content: null, embeds: [embed] });
     }

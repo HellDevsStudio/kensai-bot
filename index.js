@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
 
 // Tratamento global de erros para evitar quedas inesperadas do processo
 process.on('unhandledRejection', (reason, promise) => {
@@ -61,6 +61,11 @@ if (fs.existsSync(prefixCommandsPath)) {
         const cmd = require(path.join(prefixCommandsPath, file));
         if (cmd.name && cmd.execute) {
             client.prefixCommands.set(cmd.name, cmd);
+            if (Array.isArray(cmd.aliases)) {
+                for (const alias of cmd.aliases) {
+                    client.prefixCommands.set(alias, cmd);
+                }
+            }
             console.log(`[PrefixCommand] ✓ Carregado: ${config.PREFIX}${cmd.name}`);
         }
     }

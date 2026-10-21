@@ -1,26 +1,22 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const config = require('../../config');
+const { SlashCommandBuilder } = require('discord.js');
+const { criarEmbedPadrao } = require('../../utils/embeds');
+const { formatDuration } = require('../../utils/timeParser');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Responde com a latência real do bot e da API do Discord.'),
-
+        .setDescription('Mede a velocidade de resposta do bot e da API do Discord.'),
     async execute(interaction) {
-        // Medição do Round-Trip Time real pelo Discord (imune a descompasso de relógio local)
         const sent = await interaction.deferReply({ fetchReply: true });
         const botLatency = Math.max(1, sent.createdTimestamp - interaction.createdTimestamp);
-        const apiLatency = Math.round(interaction.client.ws.ping);
+        const wsLatency = Math.round(interaction.client.ws.ping);
+        const uptime = formatDuration(interaction.client.uptime);
 
-        const embed = new EmbedBuilder()
-            .setColor(config.EMBED_COLOR)
-            .setTitle('🏓 Pong!')
+        const embed = criarEmbedPadrao('🏓 Pong!')
             .addFields(
-                { name: '⚡ Latência do Bot', value: `\`${botLatency}ms\``, inline: true },
-                { name: '🌐 Latência da API', value: `\`${apiLatency}ms\``, inline: true }
-            )
-            .setFooter({ text: `Solicitado por ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
-            .setTimestamp();
+                { name: '⚡ Latência WebSocket', value: `\`${wsLatency >= 0 ? wsLatency : botLatency}ms\``, inline: true },
+                { name: '⏱️ Uptime', value: `\`${uptime}\``, inline: true }
+            );
 
         await interaction.editReply({ embeds: [embed] });
     }
