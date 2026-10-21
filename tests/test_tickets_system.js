@@ -14,6 +14,15 @@ const {
     gerarPainelItensPayload 
 } = require('../utils/ticketPanels');
 
+const {
+    gerarPainelPrincipal,
+    gerarPainelSuporteConfig,
+    gerarPainelTokensConfig,
+    gerarPainelItensConfig,
+    gerarPainelDespachoPaineis,
+    gerarModalConfigTokens
+} = require('../utils/configDashboard');
+
 const ticketCore = require('../utils/ticketCore');
 const slashConfig = require('../commands/slash/config');
 const prefixConfig = require('../commands/prefix/config');
@@ -32,7 +41,7 @@ function runTest(desc, fn) {
     }
 }
 
-console.log('=== TESTES DO SISTEMA DE TICKETS E CONFIGS (KENSAI STORE) ===\n');
+console.log('=== TESTES DO SISTEMA DE TICKETS E DASHBOARD INTERATIVO (KENSAI STORE) ===\n');
 
 // 1. Arquivos de Configuração Atômicos
 runTest('1. Leitura de suporte.json retorna estrutura padrão válida', () => {
@@ -64,7 +73,7 @@ runTest('4. Leitura e catálogo de itens.json contém produtos cadastrados', () 
     assert.ok(itn.itens.some(i => i.id === 'katana_kensai'));
 });
 
-// 2. Painéis Interativos
+// 2. Painéis Oficiais de Atendimento
 runTest('5. Painel de Suporte gera embed com cor #9a2ea6 e botão ticket_abrir_suporte', () => {
     const payload = gerarPainelSuportePayload();
     assert.ok(payload.embeds && payload.embeds.length > 0);
@@ -80,7 +89,6 @@ runTest('6. Painel de Tokens reflete preço dinâmico e opções de compra', () 
     const emb = payload.embeds[0].data;
     assert.strictEqual(emb.color, 0x9a2ea6);
     assert.ok(emb.description.includes('R$ 22,50'));
-    // Select menu e botão de customizado
     const select = payload.components[0].components[0];
     assert.strictEqual(select.data.custom_id, 'token_comprar_select');
     const btn = payload.components[1].components[0];
@@ -94,37 +102,62 @@ runTest('7. Painel de Itens gera Select com opções ativas do catálogo', () =>
     assert.ok(select.options.length >= 3);
 });
 
-// 3. Funções do Ticket Core
-runTest('8. ticketCore expõe todas as 4 operações vitais', () => {
+// 3. Funções do Ticket Core & Formatação de Logs de Staff
+runTest('8. ticketCore expõe todas as operações e contém lógica de Contagem de Mensagens Staff', () => {
     assert.strictEqual(typeof ticketCore.abrirTicket, 'function');
     assert.strictEqual(typeof ticketCore.fecharTicket, 'function');
     assert.strictEqual(typeof ticketCore.assumirTicket, 'function');
     assert.strictEqual(typeof ticketCore.chamarCliente, 'function');
+    
+    // Verifica presença da formatação exigida pelo usuário
+    const coreSource = fs.readFileSync(path.join(__dirname, '..', 'utils', 'ticketCore.js'), 'utf8');
+    assert.ok(coreSource.includes('Contagem de Mensagens Staff'));
+    assert.ok(coreSource.includes('staffMsgCounts'));
+    assert.ok(coreSource.includes('s.mention'));
 });
 
-// 4. Comandos /config e k!config
-runTest('9. Slash /config possui todos os 5 subcomandos (ver, painel, suporte, tokens, itens)', () => {
-    assert.strictEqual(slashConfig.data.name, 'config');
-    const subs = slashConfig.data.options.map(o => o.name);
-    assert.ok(subs.includes('ver'));
-    assert.ok(subs.includes('painel'));
-    assert.ok(subs.includes('suporte'));
-    assert.ok(subs.includes('tokens'));
-    assert.ok(subs.includes('itens'));
+// 4. Painel Central Interativo de Configuração (Dashboard)
+runTest('9. Painel Central Interativo (/config) gera botões de navegação sem comandos longos', () => {
+    const painel = gerarPainelPrincipal();
+    assert.ok(painel.embeds && painel.embeds.length > 0);
+    assert.strictEqual(painel.embeds[0].data.color, 0x9a2ea6);
+    assert.ok(painel.embeds[0].data.title.includes('Painel Central de Configurações'));
+    
+    const botoesRow1 = painel.components[0].components.map(c => c.data.custom_id);
+    assert.ok(botoesRow1.includes('cfg_nav_suporte'));
+    assert.ok(botoesRow1.includes('cfg_nav_tokens'));
+    assert.ok(botoesRow1.includes('cfg_nav_itens'));
+    
+    const botoesRow2 = painel.components[1].components.map(c => c.data.custom_id);
+    assert.ok(botoesRow2.includes('cfg_nav_paineis'));
+    assert.ok(botoesRow2.includes('cfg_btn_refresh'));
 });
 
-runTest('10. Prefix k!config possui aliases necessários incluindo h!config', () => {
-    assert.strictEqual(prefixConfig.name, 'config');
-    assert.ok(prefixConfig.aliases.includes('h!config'));
-    assert.ok(prefixConfig.aliases.includes('setup'));
+runTest('10. Subtelas interativas de Suporte, Tokens e Itens contêm Selects de Categoria, Logs e Cargo', () => {
+    const telaSup = gerarPainelSuporteConfig();
+    assert.strictEqual(telaSup.components[0].components[0].data.custom_id, 'cfg_sel_sup_cat');
+    assert.strictEqual(telaSup.components[1].components[0].data.custom_id, 'cfg_sel_sup_logs');
+    assert.strictEqual(telaSup.components[2].components[0].data.custom_id, 'cfg_sel_sup_role');
+
+    const telaTok = gerarPainelTokensConfig();
+    assert.strictEqual(telaTok.components[0].components[0].data.custom_id, 'cfg_open_modal_tokens');
+    assert.strictEqual(telaTok.components[1].components[0].data.custom_id, 'cfg_sel_tok_cat');
+
+    const telaItn = gerarPainelItensConfig();
+    assert.strictEqual(telaItn.components[0].components[0].data.custom_id, 'cfg_sel_itn_cat');
+
+    const modal = gerarModalConfigTokens();
+    assert.strictEqual(modal.data.custom_id, 'modal_cfg_tokens');
 });
+
+// Cleanup
+setSuporteConfig({ categoria_id: null });
+setTokensConfig({ preco_por_1k: 18.5, chave_pix: null });
 
 console.log(`\n=======================================================`);
 console.log(`   RESULTADO DOS TESTES DE TICKET: ${passed}/${total} PASSADOS`);
 console.log(`=======================================================\n`);
 
-setSuporteConfig({ categoria_id: null });
-setTokensConfig({ preco_por_1k: 18.5, chave_pix: null });
 if (passed !== total) {
     process.exit(1);
 }

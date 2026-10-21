@@ -218,16 +218,50 @@ async function fecharTicket(interaction, protocolo) {
         'DATA       : ' + new Date().toLocaleString('pt-BR') + '\n' +
         '==================================================\n\n';
 
+    const staffMsgCounts = {};
     try {
         const msgs = await channel.messages.fetch({ limit: 100 });
         const ordenadas = Array.from(msgs.values()).reverse();
         ordenadas.forEach(function(m) {
             const dataHora = m.createdAt.toLocaleString('pt-BR');
             transcriptText += '[' + dataHora + '] ' + m.author.tag + ': ' + (m.content || '(Embed / Anexo)') + '\n';
+
+            // Contagem de Mensagens Staff (exclui bots e o próprio cliente do ticket)
+            if (!m.author.bot && m.author.id !== ticket?.userId) {
+                if (!staffMsgCounts[m.author.id]) {
+                    staffMsgCounts[m.author.id] = {
+                        count: 0,
+                        tag: m.author.tag,
+                        mention: '<@' + m.author.id + '>'
+                    };
+                }
+                staffMsgCounts[m.author.id].count++;
+            }
         });
     } catch (e) {
         transcriptText += '\n[Aviso: Não foi possível obter todas as mensagens da sala.]\n';
     }
+
+    // Formatação solicitada:
+    // Contagem de Mensagens Staff
+    // [ 4 ] - @Kira
+    // [ 1 ] - @Dudu.yrs
+    let staffContagemStr = 'Nenhuma mensagem enviada pela staff.';
+    const staffEntries = Object.values(staffMsgCounts).sort(function(a, b) {
+        return b.count - a.count;
+    });
+    if (staffEntries.length > 0) {
+        staffContagemStr = staffEntries.map(function(s) {
+            return '[ ' + s.count + ' ] - ' + s.mention;
+        }).join('\n');
+    }
+
+    transcriptText += '\n==================================================\n' +
+        'CONTAGEM DE MENSAGENS STAFF:\n' +
+        (staffEntries.length > 0
+            ? staffEntries.map(function(s) { return '[ ' + s.count + ' ] - ' + s.tag; }).join('\n')
+            : 'Nenhuma mensagem de staff enviada.') + '\n' +
+        '==================================================\n';
 
     // 2. Enviar Log no canal configurado
     if (sysConfig.canal_logs_id) {
@@ -242,7 +276,8 @@ async function fecharTicket(interaction, protocolo) {
                     { name: '🏷️ Tipo', value: (ticket?.tipo || 'suporte').toUpperCase(), inline: true },
                     { name: '👤 Cliente', value: ticket?.userId ? '<@' + ticket.userId + '>' : 'N/A', inline: true },
                     { name: '🛡️ Fechado por', value: interaction.user.toString(), inline: true },
-                    { name: '⏰ Data de Fechamento', value: '<t:' + Math.floor(Date.now() / 1000) + ':f>', inline: true }
+                    { name: '⏰ Data de Fechamento', value: '<t:' + Math.floor(Date.now() / 1000) + ':f>', inline: true },
+                    { name: 'Contagem de Mensagens Staff', value: staffContagemStr, inline: false }
                 )
                 .setFooter({ text: 'Kensai Store • Sistema de Logs' });
 

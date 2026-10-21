@@ -1,6 +1,7 @@
 const { Events, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 const { abrirTicket, fecharTicket, assumirTicket, chamarCliente } = require('../utils/ticketCore');
 const { getTokensConfig, getItensConfig } = require('../utils/ticketConfigs');
+const { handleConfigInteraction } = require('../utils/configDashboard');
 const { criarEmbedErro, criarEmbedSucesso, criarEmbedPadrao } = require('../utils/embeds');
 const { readData, writeData } = require('../utils/db');
 const { formatDuration } = require('../utils/timeParser');
@@ -37,6 +38,11 @@ module.exports = {
         }
 
         // B. MENU SELECT (ex: /help)
+        if (interaction.isAnySelectMenu && interaction.isAnySelectMenu()) {
+            if (interaction.customId.startsWith('cfg_')) {
+                return handleConfigInteraction(interaction);
+            }
+        }
         if (interaction.isStringSelectMenu()) {
             // A. Ticket: Compra de Tokens pré-definidos
             if (interaction.customId === 'token_comprar_select') {
@@ -202,6 +208,11 @@ module.exports = {
                 if (pptCmd && pptCmd.handleButton) {
                     return pptCmd.handleButton(interaction);
                 }
+            }
+
+            // Config Dashboard
+            if (cid.startsWith('cfg_')) {
+                return handleConfigInteraction(interaction);
             }
 
             // 8. Tickets - Abrir Suporte Geral
