@@ -1,6 +1,6 @@
 /**
  * roleplay.js
- * Módulo centralizado de frases dinâmicas, contador de interações e ações de roleplay.
+ * Módulo centralizado de frases dinâmicas, contador de interações mútuas e globais.
  */
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
@@ -20,14 +20,6 @@ const ACTION_MAP = {
     pat: 'pat',
     tocaaqui: 'highfive',
     highfive: 'highfive'
-};
-
-const ACTION_VERBS = {
-    hug: 'já abraçou',
-    kiss: 'já beijou',
-    slap: 'já deu um tapa em',
-    pat: 'já fez cafuné em',
-    highfive: 'já tocou aqui com'
 };
 
 const FRASES = {
@@ -111,49 +103,59 @@ function getRandomPhrase(action, authorId, targetId, isRetribuir) {
 
 function recordAndGetCounter(action, authorId, targetId) {
     const stats = readData('roleplay_stats', {});
-    const key = authorId + '_' + targetId + '_' + action;
-    const current = (stats[key] || 0) + 1;
-    stats[key] = current;
+    
+    // 1. Contador específico do par (autor -> alvo)
+    const pairKey = authorId + '_' + targetId + '_' + action;
+    const pairCount = (stats[pairKey] || 0) + 1;
+    stats[pairKey] = pairCount;
+
+    // 2. Contador global de vezes que o alvo recebeu esta ação no servidor
+    const receivedKey = 'received_' + targetId + '_' + action;
+    const totalReceived = (stats[receivedKey] || 0) + 1;
+    stats[receivedKey] = totalReceived;
+
     writeData('roleplay_stats', stats);
 
-    const vezes = current === 1 ? '1 vez' : current + ' vezes';
+    const nouns = {
+        hug: { verb: 'já abraçou', recVerb: 'já recebeu', nounSingular: 'abraço', nounPlural: 'abraços', icon: '🫂' },
+        kiss: { verb: 'já beijou', recVerb: 'já recebeu', nounSingular: 'beijo', nounPlural: 'beijos', icon: '💋' },
+        slap: { verb: 'já deu um tapa em', recVerb: 'já levou', nounSingular: 'tapa', nounPlural: 'tapas', icon: '💥' },
+        pat: { verb: 'já fez cafuné em', recVerb: 'já recebeu', nounSingular: 'cafuné', nounPlural: 'cafunés', icon: '💆' },
+        highfive: { verb: 'já tocou aqui com', recVerb: 'já tocou aqui', nounSingular: 'vez', nounPlural: 'vezes', icon: '✋' }
+    };
+
+    const item = nouns[action] || nouns.highfive;
+    const totalStr = totalReceived === 1 ? '1 ' + item.nounSingular : totalReceived + ' ' + item.nounPlural;
 
     if (action === 'highfive') {
-        return '✋ *<@' + authorId + '> e <@' + targetId + '> já mandaram aquele High Five **' + vezes + '**!*';
-    }
-    if (action === 'slap') {
-        return '💥 *<@' + authorId + '> já deu um tapa em <@' + targetId + '> **' + vezes + '**!*';
-    }
-    if (action === 'kiss') {
-        return '💋 *<@' + authorId + '> já beijou <@' + targetId + '> **' + vezes + '**!*';
-    }
-    if (action === 'hug') {
-        return '🫂 *<@' + authorId + '> já abraçou <@' + targetId + '> **' + vezes + '**!*';
-    }
-    if (action === 'pat') {
-        return '💆 *<@' + authorId + '> já fez cafuné em <@' + targetId + '> **' + vezes + '**!*';
+        const vezPar = pairCount === 1 ? '1 vez' : pairCount + ' vezes';
+        return item.icon + ' *<@' + authorId + '> e <@' + targetId + '> já mandaram aquele High Five **' + vezPar + '**! (No total, <@' + targetId + '> ' + item.recVerb + ' **' + totalStr + '**)*';
     }
 
-    const verb = ACTION_VERBS[action] || 'já interagiu com';
-    return '📊 *<@' + authorId + '> ' + verb + ' <@' + targetId + '> **' + vezes + '**!*';
+    const pairText = pairCount === 1 
+        ? '<@' + authorId + '> ' + item.verb + ' <@' + targetId + '> **pela 1ª vez**!'
+        : '<@' + authorId + '> ' + item.verb + ' <@' + targetId + '> **' + pairCount + ' vezes**!';
+
+    return item.icon + ' *' + pairText + ' (No total, <@' + targetId + '> ' + item.recVerb + ' **' + totalStr + '**)*';
 }
 
 function getPairSummary(u1, u2) {
     const stats = readData('roleplay_stats', {});
     const actions = [
-        { key: 'hug', icon: '🫂', name: 'Abraços' },
-        { key: 'kiss', icon: '💋', name: 'Beijos' },
-        { key: 'slap', icon: '💥', name: 'Tapas' },
-        { key: 'pat', icon: '💆', name: 'Cafunés' },
-        { key: 'highfive', icon: '✋', name: 'High Fives' }
+        { key: 'hug', icon: '🫂', name: 'Abraços', noun: 'abraços recebidos' },
+        { key: 'kiss', icon: '💋', name: 'Beijos', noun: 'beijos recebidos' },
+        { key: 'slap', icon: '💥', name: 'Tapas', noun: 'tapas levados' },
+        { key: 'pat', icon: '💆', name: 'Cafunés', noun: 'cafunés recebidos' },
+        { key: 'highfive', icon: '✋', name: 'High Fives', noun: 'high fives' }
     ];
 
     const lines = actions.map(function(act) {
         const from1to2 = stats[u1 + '_' + u2 + '_' + act.key] || 0;
         const from2to1 = stats[u2 + '_' + u1 + '_' + act.key] || 0;
-        const total = from1to2 + from2to1;
-        return act.icon + ' **' + act.name + ':** ' + total + ' no total' +
-            '\n   ↳ <@' + u1 + '>: ' + from1to2 + ' • <@' + u2 + '>: ' + from2to1;
+        const totalPair = from1to2 + from2to1;
+        const totalU2Received = stats['received_' + u2 + '_' + act.key] || from1to2;
+        return act.icon + ' **' + act.name + ':** ' + totalPair + ' entre vocês (<@' + u1 + '>: ' + from1to2 + ' • <@' + u2 + '>: ' + from2to1 + ')' +
+            '\n   ↳ *Total geral recebido por <@' + u2 + '>: ' + totalU2Received + ' ' + act.noun + '*';
     });
 
     return lines.join('\n\n');
