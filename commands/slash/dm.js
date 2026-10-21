@@ -13,22 +13,23 @@ module.exports = {
             return interaction.reply({ content: NO_PERMISSION_MSG, flags: [MessageFlags.Ephemeral] });
         }
 
+        // Deferir resposta imediatamente para evitar expiração do token de interação (DiscordAPIError 10062)
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
         const targetUser = interaction.options.getUser('usuario');
         const text = interaction.options.getString('mensagem');
 
         const embed = criarEmbedPadrao('📬 Notificação Oficial • Kensai Store', text)
-            .setFooter({ text: `Enviado por: ${interaction.user.tag} • Kensai Store Support` });
+            .setFooter({ text: 'Enviado por: ' + interaction.user.tag + ' • Kensai Store Support' });
 
         try {
             await targetUser.send({ embeds: [embed] });
-            await interaction.reply({
-                content: `✅ Notificação enviada com sucesso para a DM de ${targetUser}!`,
-                flags: [MessageFlags.Ephemeral]
+            await interaction.editReply({
+                content: '✅ Notificação enviada com sucesso para a DM de ' + targetUser.toString() + '!'
             });
         } catch (error) {
-            await interaction.reply({
-                embeds: [criarEmbedErro('DM Fechada', `Não foi possível entregar a mensagem para ${targetUser}. As mensagens diretas do usuário podem estar desativadas.`)],
-                flags: [MessageFlags.Ephemeral]
+            await interaction.editReply({
+                embeds: [criarEmbedErro('DM Fechada', 'Não foi possível entregar a mensagem para ' + targetUser.toString() + '. As mensagens diretas do usuário podem estar desativadas.')]
             });
         }
     }

@@ -17,6 +17,8 @@ module.exports = {
             return interaction.reply({ content: NO_PERMISSION_MSG, flags: [MessageFlags.Ephemeral] });
         }
 
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
         const channel = interaction.options.getChannel('canal') || interaction.channel;
 
         try {
@@ -30,10 +32,10 @@ module.exports = {
             ).setFooter({ text: 'Kensai Store • Segurança e Moderação' });
 
             await channel.send({ embeds: [embed] });
-            await interaction.reply({ content: '🔓 Canal destrancado com sucesso!', flags: [MessageFlags.Ephemeral] });
+            await interaction.editReply({ content: '🔓 Canal ' + channel.toString() + ' destrancado com sucesso!' });
         } catch (error) {
             console.error('Erro no /unlock:', error);
-            await interaction.reply({ embeds: [criarEmbedErro('Erro ao Destrancar Canal', 'Falta de permissão no canal.')], flags: [MessageFlags.Ephemeral] });
+            await interaction.editReply({ embeds: [criarEmbedErro('Erro ao Destrancar Canal', 'Falta de permissão no canal.')] });
         }
     }
 };

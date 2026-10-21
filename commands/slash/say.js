@@ -17,16 +17,16 @@ module.exports = {
             return interaction.reply({ content: NO_PERMISSION_MSG, flags: [MessageFlags.Ephemeral] });
         }
 
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
         const targetChannel = interaction.options.getChannel('canal') || interaction.channel;
         let msg = interaction.options.getString('mensagem');
 
-        // Sanitização contra menção em massa abusiva
-        msg = msg.replace(/@(everyone|here)/gi, '@​$1');
+        msg = msg.replace(/@(everyone|here)/gi, '@\u200b$1');
 
         await targetChannel.send({ content: msg });
-        await interaction.reply({
-            content: `✅ Mensagem enviada com sucesso no canal ${targetChannel}!`,
-            flags: [MessageFlags.Ephemeral]
+        await interaction.editReply({
+            content: '✅ Mensagem enviada com sucesso no canal ' + targetChannel.toString() + '!'
         });
     }
 };

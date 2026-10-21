@@ -35,6 +35,8 @@ module.exports = {
             });
         }
 
+        await interaction.deferReply();
+
         await targetUser.send({
             embeds: [
                 criarEmbedPadrao(
@@ -58,12 +60,11 @@ module.exports = {
                     { name: '📅 Data', value: '<t:' + Math.floor(Date.now() / 1000) + ':F>', inline: false }
                 );
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Erro no /kick:', error);
-            await interaction.reply({
-                embeds: [criarEmbedErro('Erro na Expulsão', 'Não foi possível expulsar o membro.')],
-                flags: [MessageFlags.Ephemeral]
+            await interaction.editReply({
+                embeds: [criarEmbedErro('Erro na Expulsão', 'Não foi possível expulsar o membro.')]
             });
         }
     }

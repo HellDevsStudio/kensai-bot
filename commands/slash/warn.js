@@ -26,6 +26,8 @@ module.exports = {
             });
         }
 
+        await interaction.deferReply();
+
         const warnId = crypto.randomBytes(3).toString('hex').toUpperCase();
         const warnsDb = readData('warns', {});
         const userWarns = warnsDb[targetUser.id] || [];
@@ -66,6 +68,6 @@ module.exports = {
                 { name: '📄 Motivo', value: reason, inline: false }
             );
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
     }
 };

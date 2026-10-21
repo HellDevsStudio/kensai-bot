@@ -31,6 +31,8 @@ module.exports = {
             });
         }
 
+        await interaction.deferReply();
+
         await targetUser.send({
             embeds: [
                 criarEmbedPadrao(
@@ -54,12 +56,11 @@ module.exports = {
                     { name: '📅 Data', value: '<t:' + Math.floor(Date.now() / 1000) + ':F>', inline: false }
                 );
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.editReply({ embeds: [embed] });
         } catch (error) {
             console.error('Erro no /ban:', error);
-            await interaction.reply({
-                embeds: [criarEmbedErro('Erro no Banimento', 'Não foi possível banir o usuário informado.')],
-                flags: [MessageFlags.Ephemeral]
+            await interaction.editReply({
+                embeds: [criarEmbedErro('Erro no Banimento', 'Não foi possível banir o usuário informado.')]
             });
         }
     }

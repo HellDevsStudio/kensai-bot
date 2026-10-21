@@ -18,6 +18,10 @@ module.exports = {
             try {
                 await command.execute(interaction, client);
             } catch (error) {
+                if (error.code === 10062) {
+                    console.warn(`⚠️ [Interação Expirada] /${interaction.commandName} demorou mais de 3s para responder à API do Discord.`);
+                    return;
+                }
                 console.error(`❌ Erro ao executar o comando /${interaction.commandName}:`, error);
                 const embedErro = criarEmbedErro('Erro na Execução', 'Ocorreu um erro ao processar este comando. Tente novamente mais tarde.');
                 const erroMsg = { embeds: [embedErro], flags: [MessageFlags.Ephemeral] };

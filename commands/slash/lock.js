@@ -17,6 +17,8 @@ module.exports = {
             return interaction.reply({ content: NO_PERMISSION_MSG, flags: [MessageFlags.Ephemeral] });
         }
 
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
         const channel = interaction.options.getChannel('canal') || interaction.channel;
 
         try {
@@ -30,14 +32,10 @@ module.exports = {
             ).setFooter({ text: 'Kensai Store • Segurança e Moderação' });
 
             await channel.send({ embeds: [embed] });
-            if (channel.id !== interaction.channel.id) {
-                await interaction.reply({ content: `🔒 O canal ${channel} foi trancado com sucesso!`, flags: [MessageFlags.Ephemeral] });
-            } else {
-                await interaction.reply({ content: '🔒 Canal trancado com sucesso!', flags: [MessageFlags.Ephemeral] });
-            }
+            await interaction.editReply({ content: '🔒 O canal ' + channel.toString() + ' foi trancado com sucesso!' });
         } catch (error) {
             console.error('Erro no /lock:', error);
-            await interaction.reply({ embeds: [criarEmbedErro('Erro ao Trancar Canal', 'Falta de permissão no canal.')], flags: [MessageFlags.Ephemeral] });
+            await interaction.editReply({ embeds: [criarEmbedErro('Erro ao Trancar Canal', 'Falta de permissão no canal.')] });
         }
     }
 };
