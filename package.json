@@ -1,0 +1,22 @@
+{
+  "name": "kensai-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord modular e escalável para servidores",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "discordjs",
+    "kensai"
+  ],
+  "author": "Kensai / HellDevs",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7"
+  }
+}
