@@ -83,7 +83,8 @@ const CATEGORIAS = {
             '`/dm` - Notificação direta da loja',
             '`/addemoji` - Adiciona emoji',
             '`/addsticker` - Cria figurinha (sticker)',
-            '`/sorteio` - Sistema de sorteios'
+            '`/sorteio` - Sistema de sorteios',
+            '`/config` - Central de configuração dos 3 sistemas (Suporte, Tokens, Itens)'
         ]
     }
 };

@@ -1,4 +1,6 @@
-const { Events, MessageFlags } = require('discord.js');
+const { Events, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { abrirTicket, fecharTicket, assumirTicket, chamarCliente } = require('../utils/ticketCore');
+const { getTokensConfig, getItensConfig } = require('../utils/ticketConfigs');
 const { criarEmbedErro, criarEmbedSucesso, criarEmbedPadrao } = require('../utils/embeds');
 const { readData, writeData } = require('../utils/db');
 const { formatDuration } = require('../utils/timeParser');
@@ -36,6 +38,26 @@ module.exports = {
 
         // B. MENU SELECT (ex: /help)
         if (interaction.isStringSelectMenu()) {
+            // A. Ticket: Compra de Tokens pré-definidos
+            if (interaction.customId === 'token_comprar_select') {
+                const qtd = parseInt(interaction.values[0], 10);
+                if (isNaN(qtd) || qtd <= 0) {
+                    return interaction.reply({ content: '❌ Quantidade inválida selecionada.', flags: [MessageFlags.Ephemeral] });
+                }
+                const tokCfg = getTokensConfig();
+                const preco1k = tokCfg.preco_por_1k || 18.5;
+                const valor = (qtd / 1000) * preco1k;
+                return abrirTicket(interaction, 'tokens', { quantidade: qtd, valor });
+            }
+
+            // B. Ticket: Catálogo de Itens
+            if (interaction.customId === 'item_comprar_select') {
+                const itemId = interaction.values[0];
+                const itnCfg = getItensConfig();
+                const item = (itnCfg.itens || []).find(i => i.id === itemId) || { id: itemId, nome: itemId, preco: 'Consulte a staff', descricao: 'Item selecionado no catálogo' };
+                return abrirTicket(interaction, 'itens', item);
+            }
+
             if (interaction.customId === 'help_category_select') {
                 const category = interaction.values[0];
                 const helpCommand = client.slashCommands.get('help');
@@ -180,6 +202,46 @@ module.exports = {
                 if (pptCmd && pptCmd.handleButton) {
                     return pptCmd.handleButton(interaction);
                 }
+            }
+
+            // 8. Tickets - Abrir Suporte Geral
+            if (cid === 'ticket_abrir_suporte') {
+                return abrirTicket(interaction, 'suporte');
+            }
+
+            // 9. Tickets - Comprar Tokens Customizado (Abre Modal)
+            if (cid === 'token_comprar_custom') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_token_custom')
+                    .setTitle('Comprar Tokens • Personalizado');
+
+                const input = new TextInputBuilder()
+                    .setCustomId('token_custom_qtd')
+                    .setLabel('Quantidade de Tokens desejada:')
+                    .setPlaceholder('Ex: 15000 (mínimo 100)')
+                    .setStyle(TextInputStyle.Short)
+                    .setMinLength(3)
+                    .setMaxLength(8)
+                    .setRequired(true);
+
+                modal.addComponents(new ActionRowBuilder().addComponents(input));
+                return interaction.showModal(modal);
+            }
+
+            // 10. Tickets - Gerenciamento (Fechar, Assumir, Chamar)
+            if (cid.startsWith('ticket_fechar_')) {
+                const protocolo = cid.replace('ticket_fechar_', '');
+                return fecharTicket(interaction, protocolo);
+            }
+
+            if (cid.startsWith('ticket_assumir_')) {
+                const protocolo = cid.replace('ticket_assumir_', '');
+                return assumirTicket(interaction, protocolo);
+            }
+
+            if (cid.startsWith('ticket_chamar_')) {
+                const protocolo = cid.replace('ticket_chamar_', '');
+                return chamarCliente(interaction, protocolo);
             }
 
             // 7. Mini-game Jogo da Velha (TTT)
