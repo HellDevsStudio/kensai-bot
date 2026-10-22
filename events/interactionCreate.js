@@ -42,6 +42,10 @@ module.exports = {
             if (interaction.customId.startsWith('cfg_')) {
                 return handleConfigInteraction(interaction);
             }
+            if (interaction.customId === 'copy_sel_channel' || interaction.customId === 'copy_sel_category') {
+                const { handleCopySelect } = require('../utils/channelCloner');
+                return handleCopySelect(interaction);
+            }
         }
         if (interaction.isStringSelectMenu()) {
             // A. Ticket: Compra de Tokens pré-definidos
@@ -77,6 +81,11 @@ module.exports = {
         // C. BOTÕES INTERATIVOS
         if (interaction.isButton()) {
             const cid = interaction.customId;
+
+            if (cid === 'copy_btn_fechar') {
+                const { handleCopyButton } = require('../utils/channelCloner');
+                return handleCopyButton(interaction);
+            }
 
             // 1. Sugestões (Aprovar / Recusar)
             if (cid.startsWith('sug_')) {
@@ -287,6 +296,10 @@ module.exports = {
         // D. MODAL SUBMIT
         if (interaction.isModalSubmit()) {
             try {
+                if (interaction.customId.startsWith('modal_copy_chan_') || interaction.customId.startsWith('modal_copy_cat_')) {
+                    const { handleCopyModal } = require('../utils/channelCloner');
+                    return await handleCopyModal(interaction);
+                }
                 // Modal de Configuração de Tokens (Preço & Pix)
                 if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_')) {
                     return await handleConfigInteraction(interaction);
