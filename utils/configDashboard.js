@@ -467,17 +467,17 @@ async function handleConfigInteraction(interaction) {
     if (cid === 'modal_cfg_tokens') {
         const rawPreco = interaction.fields.getTextInputValue('cfg_input_preco_1k');
         const rawPix = interaction.fields.getTextInputValue('cfg_input_chave_pix');
-        const preco = parseFloat(rawPreco.replace(',', '.'));
+        const precoLimpo = parseFloat(rawPreco.replace(/[^0-9,\.]/g, '').replace(',', '.'));
 
         const updates = {};
-        if (!isNaN(preco) && preco > 0) updates.preco_por_1k = preco;
+        if (!isNaN(precoLimpo) && precoLimpo > 0) updates.preco_por_1k = precoLimpo;
         if (rawPix && rawPix.trim().length > 0) updates.chave_pix = rawPix.trim();
 
-        setTokensConfig(updates);
+        const updated = setTokensConfig(updates);
         return interaction.reply({
-            content: '✅ **Preço por 1k e Chave Pix atualizados com sucesso!**\n\n' +
-                '• **Novo Preço 1k:** `R$ ' + Number(updates.preco_por_1k || 18.5).toFixed(2).replace('.', ',') + '`\n' +
-                '• **Nova Chave Pix:** `' + (updates.chave_pix || 'Não configurada') + '`',
+            content: '✅ **Preço por 1.000 Tokens e Chave Pix atualizados com sucesso!**\n\n' +
+                '• **Preço por 1k:** `R$ ' + Number(updated.preco_por_1k || 18.5).toFixed(2).replace('.', ',') + '`\n' +
+                '• **Chave Pix:** `' + (updated.chave_pix || 'Não configurada') + '`',
             flags: [MessageFlags.Ephemeral]
         });
     }

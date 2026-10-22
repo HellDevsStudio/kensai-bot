@@ -265,12 +265,41 @@ module.exports = {
             return;
         }
 
-        // D. MODAL SUBMIT (ex: /embed)
+        // D. MODAL SUBMIT
         if (interaction.isModalSubmit()) {
-            if (interaction.customId === 'embed_builder_modal') {
-                const embedCmd = client.slashCommands.get('embed');
-                if (embedCmd && embedCmd.handleModal) {
-                    return embedCmd.handleModal(interaction);
+            try {
+                // Modal de Configuração de Tokens (Preço & Pix)
+                if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_')) {
+                    return await handleConfigInteraction(interaction);
+                }
+
+                // Modal de Compra de Tokens Personalizados
+                if (interaction.customId === 'modal_token_custom') {
+                    const rawQtd = interaction.fields.getTextInputValue('token_custom_qtd');
+                    const qtd = parseInt(rawQtd.replace(/[^0-9]/g, ''), 10);
+                    if (isNaN(qtd) || qtd < 100) {
+                        return await interaction.reply({
+                            content: '❌ Digite uma quantidade válida (mínimo 100 tokens).',
+                            flags: [MessageFlags.Ephemeral]
+                        });
+                    }
+                    const tokCfg = getTokensConfig();
+                    const preco1k = tokCfg.preco_por_1k || 18.5;
+                    const valor = (qtd / 1000) * preco1k;
+                    return await abrirTicket(interaction, 'tokens', { quantidade: qtd, valor });
+                }
+
+                // Modal do Criador de Embed
+                if (interaction.customId === 'embed_builder_modal') {
+                    const embedCmd = client.slashCommands.get('embed');
+                    if (embedCmd && embedCmd.handleModal) {
+                        return await embedCmd.handleModal(interaction);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Erro no modal submit:', error);
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({ content: '❌ Ocorreu um erro ao processar o formulário.', flags: [MessageFlags.Ephemeral] }).catch(() => {});
                 }
             }
         }
