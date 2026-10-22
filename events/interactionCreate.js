@@ -10,6 +10,15 @@ module.exports = {
     name: Events.InteractionCreate,
     once: false,
     async execute(interaction, client) {
+        // 0. AUTOCOMPLETE
+        if (interaction.isAutocomplete()) {
+            const command = client.slashCommands.get(interaction.commandName);
+            if (command && command.autocomplete) {
+                return command.autocomplete(interaction);
+            }
+            return;
+        }
+
         // A. COMANDOS SLASH
         if (interaction.isChatInputCommand()) {
             const command = client.slashCommands.get(interaction.commandName);
@@ -48,6 +57,11 @@ module.exports = {
             }
         }
         if (interaction.isStringSelectMenu()) {
+            // C. Arsenal de Itens Blade Ball (Hellcore System)
+            if (interaction.customId === 'menu_categoria_item' || interaction.customId === 'menu_item_especifico') {
+                const { handleItemInteraction } = require('../utils/itemControl');
+                return handleItemInteraction(interaction);
+            }
             // A. Ticket: Compra de Tokens pré-definidos
             if (interaction.customId === 'token_comprar_select') {
                 const qtd = parseInt(interaction.values[0], 10);
@@ -81,6 +95,12 @@ module.exports = {
         // C. BOTÕES INTERATIVOS
         if (interaction.isButton()) {
             const cid = interaction.customId;
+
+            // Interações de Itens Blade Ball
+            if (cid === 'btn_cancelar_compra' || cid.startsWith('btn_personalizado_') || cid.startsWith('btn_comprar_') || cid === 'btn_item_assumir') {
+                const { handleItemInteraction } = require('../utils/itemControl');
+                return handleItemInteraction(interaction);
+            }
 
             if (cid === 'copy_btn_fechar') {
                 const { handleCopyButton } = require('../utils/channelCloner');
