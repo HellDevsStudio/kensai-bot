@@ -1,5 +1,5 @@
 const { Events, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-const { abrirTicket, fecharTicket, assumirTicket, chamarCliente } = require('../utils/ticketCore');
+const { abrirTicket, fecharTicket, assumirTicket, chamarCliente, aprovarCompraToken, recusarCompraToken, aprovarEntregaItem } = require('../utils/ticketCore');
 const { getTokensConfig, getItensConfig } = require('../utils/ticketConfigs');
 const { handleConfigInteraction } = require('../utils/configDashboard');
 const { criarEmbedErro, criarEmbedSucesso, criarEmbedPadrao } = require('../utils/embeds');
@@ -239,6 +239,19 @@ module.exports = {
                 return interaction.showModal(modal);
             }
 
+            // Aprovação e Recusa Comercial
+            if (cid.startsWith('token_aprovar_')) {
+                const protocolo = cid.replace('token_aprovar_', '');
+                return aprovarCompraToken(interaction, protocolo);
+            }
+            if (cid.startsWith('token_recusar_')) {
+                const protocolo = cid.replace('token_recusar_', '');
+                return recusarCompraToken(interaction, protocolo);
+            }
+            if (cid.startsWith('item_aprovar_')) {
+                const protocolo = cid.replace('item_aprovar_', '');
+                return aprovarEntregaItem(interaction, protocolo);
+            }
             // 10. Tickets - Gerenciamento (Fechar, Assumir, Chamar)
             if (cid.startsWith('ticket_fechar_')) {
                 const protocolo = cid.replace('ticket_fechar_', '');
@@ -277,9 +290,9 @@ module.exports = {
                 if (interaction.customId === 'modal_token_custom') {
                     const rawQtd = interaction.fields.getTextInputValue('token_custom_qtd');
                     const qtd = parseInt(rawQtd.replace(/[^0-9]/g, ''), 10);
-                    if (isNaN(qtd) || qtd < 100) {
+                    if (isNaN(qtd) || qtd < 50) {
                         return await interaction.reply({
-                            content: '❌ Digite uma quantidade válida (mínimo 100 tokens).',
+                            content: '❌ Digite uma quantidade válida (mínimo 50 tokens).',
                             flags: [MessageFlags.Ephemeral]
                         });
                     }
