@@ -164,7 +164,7 @@ async function abrirTicket(interaction, tipo, detalhes) {
         const preco1kFormatado = 'R$ ' + precoUnitario.toFixed(2).replace('.', ',');
         const chavePix = sysConfig.chave_pix || 'Chave Pix a consultar com a staff';
 
-        desc = 'Olá ' + user.toString() + ', seu pedido de **Tokens** foi iniciado com sucesso!\n\n' +
+        desc = '> Olá ' + user.toString() + ', seu pedido de **Tokens** foi iniciado com sucesso!\n\n' +
             '📌 **COMO FINALIZAR SUA COMPRA:**\n' +
             '1. Faça a transferência Pix no valor exato de **' + valorFormatado + '** para a chave abaixo;\n' +
             '2. Envie o **comprovante de pagamento** neste chat;\n' +
@@ -190,7 +190,7 @@ async function abrirTicket(interaction, tipo, detalhes) {
         const itemPreco = detalhes?.preco || 'A Combinar';
         const itemDesc = detalhes?.descricao || '';
 
-        desc = 'Olá ' + user.toString() + ', você solicitou a compra de um item do nosso catálogo:\n\n' +
+        desc = '> Olá ' + user.toString() + ', você solicitou a compra de um item do nosso catálogo:\n\n' +
             '📌 **PRÓXIMOS PASSOS:**\n' +
             '1. Combine os detalhes de entrega e forma de pagamento com a Staff logo abaixo;\n' +
             '2. Envie o comprovante de pagamento no chat;\n' +
@@ -209,13 +209,14 @@ async function abrirTicket(interaction, tipo, detalhes) {
                 { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
             );
     } else if (tipo === 'denuncia') {
-        titulo = '🚨 Painel de Denúncias • Kensai Store';
-        desc = 'Olá ' + user.toString() + ', seu ticket de **Denúncia** foi iniciado com sucesso!\n\n' +
-            '📌 **PARA ANALISARMOS O SEU CASO, ENVIE NO CHAT:**\n\n' +
-            '• **Nick do acusado (Roblox/Discord):**\n' +
-            '• **Descrição do ocorrido:**\n' +
-            '• **Provas (Prints ou vídeo): (Obrigatório)**\n\n' +
-            '⏳ *Aguarde um momento. Um administrador atenderá você em breve.*';
+        titulo = '🚨 Central de Denúncias & Ouvidoria • Kensai Store';
+        desc = '> Olá ' + user.toString() + ', sua denúncia foi protocolada com prioridade máxima.\n' +
+            '> Nossa administração investiga rigorosamente qualquer tentativa de golpe (scam), invasão ou má conduta.\n\n' +
+            '📋 **GUIA DE INSTRUÇÕES — ENVIE NO CHAT:**\n' +
+            '• **Nick do acusado:** `(Roblox / Discord / ID)`\n' +
+            '• **Descrição detalhada:** `(Explique exatamente o que aconteceu)`\n' +
+            '• **Provas materiais:** `(Prints, gravações em vídeo ou comprovantes) — [Obrigatório]`\n\n' +
+            '⏳ *Aguarde um momento. Um administrador revisará o material e assumirá este chamado.*';
 
         embedTicket
             .setTitle(titulo)
@@ -223,16 +224,16 @@ async function abrirTicket(interaction, tipo, detalhes) {
             .addFields(
                 { name: '📋 Protocolo', value: '`' + protocolo + '`', inline: true },
                 { name: '👤 Denunciante', value: user.toString(), inline: true },
-                { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
+                { name: '🚨 Prioridade', value: '🔴 **Alta**', inline: true }
             );
     } else if (tipo === 'compra') {
-        titulo = '🛒 Setor de Compras • Kensai Store';
-        desc = 'Olá ' + user.toString() + ', seja bem-vindo ao setor de compras da **Kensai Store**!\n\n' +
-            '📌 **INFORME OS DETALHES DO SEU PEDIDO:**\n' +
-            '• Qual produto, entrega ou encomenda você deseja?\n' +
-            '• Se for entrega pendente, informe o comprovante ou comprovativo;\n' +
-            '• Seu Nick no jogo / Roblox.\n\n' +
-            '⏳ *Um membro da Staff já foi notificado e atenderá você em breve!*';
+        titulo = '🛒 Setor Comercial & Pedidos • Kensai Store';
+        desc = '> Olá ' + user.toString() + ', seja muito bem-vindo ao setor comercial da **Kensai Store**!\n\n' +
+            '📌 **COMO PODEMOS TE AJUDAR:**\n' +
+            '• Qual produto, entrega ou encomenda personalizada você deseja?\n' +
+            '• Se já realizou o pagamento ou tem entrega pendente, envie o comprovante Pix aqui;\n' +
+            '• Informe o seu Nick no jogo / Roblox para agilizarmos o atendimento.\n\n' +
+            '⏳ *Um atendente da nossa equipe comercial responderá em breve.*';
 
         embedTicket
             .setTitle(titulo)
@@ -243,10 +244,11 @@ async function abrirTicket(interaction, tipo, detalhes) {
                 { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
             );
     } else {
-        titulo = '🔎 Suporte Geral • Kensai Store';
-        desc = 'Olá ' + user.toString() + ', seja bem-vindo ao **Suporte Geral** da **Kensai Store**!\n\n' +
-            'Descreva detalhadamente como podemos te ajudar (dúvidas sobre o servidor, cargos, sugestões ou parcerias).\n\n' +
-            '⏳ *Nossa equipe atenderá você em breve.*';
+        titulo = '🔎 Suporte Geral & Comunidade • Kensai Store';
+        desc = '> Olá ' + user.toString() + ', seja bem-vindo ao **Suporte Geral** da **Kensai Store**!\n\n' +
+            '📌 **COMO PODEMOS TE AJUDAR:**\n' +
+            'Descreva detalhadamente a sua dúvida sobre regras, cargos VIP, benefícios, parcerias ou sugestões para a comunidade.\n\n' +
+            '⏳ *Nossa equipe atenderá você em instantes.*';
 
         embedTicket
             .setTitle(titulo)
@@ -254,7 +256,7 @@ async function abrirTicket(interaction, tipo, detalhes) {
             .addFields(
                 { name: '📋 Protocolo', value: '`' + protocolo + '`', inline: true },
                 { name: '👤 Cliente', value: user.toString(), inline: true },
-                { name: '⏰ Horário', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
+                { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
             );
     }
 

@@ -7,42 +7,41 @@ const TOKEN_EMOJI_STR = '<:token:1562671579257770147>';
 const TOKEN_EMOJI_OBJ = { id: TOKEN_EMOJI_ID, name: 'token' };
 
 /**
- * Gera payload do Painel de Suporte Oficial (Inspirado no modelo Kensai Store)
+ * Gera payload do Painel de Suporte Oficial (Design Premium Kensai Store)
  */
 function gerarPainelSuportePayload() {
     const config = getSuporteConfig();
-    const embed = criarEmbedPadrao('⛩️ CENTRAL DE SUPORTE')
-        .setAuthor({ name: 'Suporte' })
+    const embed = criarEmbedPadrao('⚔️ Central de Suporte & Atendimento Oficial')
+        .setAuthor({ name: '⛩️ CENTRAL DE ATENDIMENTO • KENSAI STORE' })
         .setDescription(
-            'Precisa de ajuda ou quer reportar uma infração?\n\n' +
-            'Escolha a opção abaixo para abrir o seu ticket:\n\n' +
-            '• **Compra:** Dúvidas, entregas ou encomendas.\n' +
-            '• **Denúncia:** Scam, fraudes ou violação de regras.\n' +
-            '• **Servidor:** Dúvidas gerais e sugestões.\n\n' +
-            '*(Ticket de Denúncia)*\n' +
-            '🚨 **PAINEL DE DENÚNCIAS**\n' +
-            'Para analisarmos o seu caso, envie no chat:\n\n' +
-            '**Nick do acusado (Roblox/Discord):**\n' +
-            '**Descrição do ocorrido:**\n' +
-            '**Provas (Prints ou vídeo): (Obrigatório)**\n\n' +
-            '⏳ *Aguarde um momento. Um administrador atenderá você em breve.*'
+            '> Seja muito bem-vindo à nossa **Central Oficial de Atendimento**.\n' +
+            '> Selecione o departamento correspondente abaixo para iniciar uma sala privativa e criptografada com a nossa equipe.\n\n' +
+            '🛒 **Setor de Compras & Encomendas**\n' +
+            '• Dúvidas comerciais, status de entrega, encomendas personalizadas e pagamentos.\n\n' +
+            '🔎 **Suporte Geral & Comunidade**\n' +
+            '• Dúvidas do servidor, esclarecimento de regras, cargos VIP, parcerias e sugestões.\n\n' +
+            '🚨 **Ouvidoria & Denúncias**\n' +
+            '• Reporte de golpes (scams), fraudes, roubos ou violação grave das diretrizes.\n\n' +
+            '──────────────────────────────────────────\n' +
+            '🛡️ **Atendimento Privativo:** Sala exclusiva visível apenas para você e a Staff.\n' +
+            '📜 **Segurança & Auditoria:** Todas as mensagens são arquivadas em logs com transcript oficial.'
         )
-        .setFooter({ text: 'Kensai store' });
+        .setFooter({ text: 'Kensai Store • A lâmina mais rápida do atendimento' });
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('ticket_abrir_compra')
-            .setLabel('Compra')
+            .setLabel('Compras & Entregas')
             .setEmoji('🛒')
             .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
             .setCustomId('ticket_abrir_suporte')
-            .setLabel('Suporte geral')
+            .setLabel('Suporte Geral')
             .setEmoji('🔎')
             .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
             .setCustomId('ticket_abrir_denuncia')
-            .setLabel('Denúncia')
+            .setLabel('Denúncias & Golpes')
             .setEmoji('🚨')
             .setStyle(ButtonStyle.Danger)
     );
