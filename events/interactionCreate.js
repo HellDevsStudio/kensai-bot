@@ -215,9 +215,15 @@ module.exports = {
                 return handleConfigInteraction(interaction);
             }
 
-            // 8. Tickets - Abrir Suporte Geral
+            // 8. Tickets - Abertura por Departamento
             if (cid === 'ticket_abrir_suporte') {
                 return abrirTicket(interaction, 'suporte');
+            }
+            if (cid === 'ticket_abrir_compra') {
+                return abrirTicket(interaction, 'compra');
+            }
+            if (cid === 'ticket_abrir_denuncia') {
+                return abrirTicket(interaction, 'denuncia');
             }
 
             // 9. Tickets - Comprar Tokens Customizado (Abre Modal)

@@ -79,8 +79,11 @@ runTest('5. Painel de Suporte gera embed com cor #9a2ea6 e botão ticket_abrir_s
     assert.ok(payload.embeds && payload.embeds.length > 0);
     const emb = payload.embeds[0].data;
     assert.strictEqual(emb.color, 0x9a2ea6);
-    assert.ok(emb.title.includes('Suporte'));
-    assert.strictEqual(payload.components[0].components[0].data.custom_id, 'ticket_abrir_suporte');
+    assert.ok(emb.title.toLowerCase().includes('suporte'));
+    const btnIds = payload.components[0].components.map(c => c.data.custom_id);
+    assert.ok(btnIds.includes('ticket_abrir_compra'));
+    assert.ok(btnIds.includes('ticket_abrir_suporte'));
+    assert.ok(btnIds.includes('ticket_abrir_denuncia'));
 });
 
 runTest('6. Painel de Tokens reflete preço dinâmico e opções de compra', () => {

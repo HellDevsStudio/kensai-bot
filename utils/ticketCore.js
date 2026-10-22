@@ -73,7 +73,8 @@ async function abrirTicket(interaction, tipo, detalhes) {
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     const protocolo = gerarProtocolo();
-    const nomeCanal = (tipo === 'tokens' ? 'token-' : (tipo === 'itens' ? 'item-' : 'suporte-')) + user.username.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const prefixCanal = tipo === 'tokens' ? 'token-' : (tipo === 'itens' ? 'item-' : (tipo === 'compra' ? 'compra-' : (tipo === 'denuncia' ? 'denuncia-' : 'suporte-')));
+    const nomeCanal = prefixCanal + user.username.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     // Permissões iniciais do canal
     const permissionOverwrites = [
@@ -207,8 +208,48 @@ async function abrirTicket(interaction, tipo, detalhes) {
                 { name: '👤 Cliente', value: user.toString(), inline: true },
                 { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
             );
-    } else {
+    } else if (tipo === 'denuncia') {
+        titulo = '🚨 Painel de Denúncias • Kensai Store';
+        desc = 'Olá ' + user.toString() + ', seu ticket de **Denúncia** foi iniciado com sucesso!\n\n' +
+            '📌 **PARA ANALISARMOS O SEU CASO, ENVIE NO CHAT:**\n\n' +
+            '• **Nick do acusado (Roblox/Discord):**\n' +
+            '• **Descrição do ocorrido:**\n' +
+            '• **Provas (Prints ou vídeo): (Obrigatório)**\n\n' +
+            '⏳ *Aguarde um momento. Um administrador atenderá você em breve.*';
+
         embedTicket
+            .setTitle(titulo)
+            .setDescription(desc)
+            .addFields(
+                { name: '📋 Protocolo', value: '`' + protocolo + '`', inline: true },
+                { name: '👤 Denunciante', value: user.toString(), inline: true },
+                { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
+            );
+    } else if (tipo === 'compra') {
+        titulo = '🛒 Setor de Compras • Kensai Store';
+        desc = 'Olá ' + user.toString() + ', seja bem-vindo ao setor de compras da **Kensai Store**!\n\n' +
+            '📌 **INFORME OS DETALHES DO SEU PEDIDO:**\n' +
+            '• Qual produto, entrega ou encomenda você deseja?\n' +
+            '• Se for entrega pendente, informe o comprovante ou comprovativo;\n' +
+            '• Seu Nick no jogo / Roblox.\n\n' +
+            '⏳ *Um membro da Staff já foi notificado e atenderá você em breve!*';
+
+        embedTicket
+            .setTitle(titulo)
+            .setDescription(desc)
+            .addFields(
+                { name: '📋 Protocolo', value: '`' + protocolo + '`', inline: true },
+                { name: '👤 Cliente', value: user.toString(), inline: true },
+                { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
+            );
+    } else {
+        titulo = '🔎 Suporte Geral • Kensai Store';
+        desc = 'Olá ' + user.toString() + ', seja bem-vindo ao **Suporte Geral** da **Kensai Store**!\n\n' +
+            'Descreva detalhadamente como podemos te ajudar (dúvidas sobre o servidor, cargos, sugestões ou parcerias).\n\n' +
+            '⏳ *Nossa equipe atenderá você em breve.*';
+
+        embedTicket
+            .setTitle(titulo)
             .setDescription(desc)
             .addFields(
                 { name: '📋 Protocolo', value: '`' + protocolo + '`', inline: true },

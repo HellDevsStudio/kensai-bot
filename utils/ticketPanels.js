@@ -7,27 +7,44 @@ const TOKEN_EMOJI_STR = '<:token:1562671579257770147>';
 const TOKEN_EMOJI_OBJ = { id: TOKEN_EMOJI_ID, name: 'token' };
 
 /**
- * Gera payload do Painel de Suporte Oficial
+ * Gera payload do Painel de Suporte Oficial (Inspirado no modelo Kensai Store)
  */
 function gerarPainelSuportePayload() {
     const config = getSuporteConfig();
-    const embed = criarEmbedPadrao('🎫 Central de Atendimento • Suporte')
+    const embed = criarEmbedPadrao('⛩️ CENTRAL DE SUPORTE')
+        .setAuthor({ name: 'Suporte' })
         .setDescription(
-            'Seja bem-vindo à Central de Atendimento da **Kensai Store**!\n\n' +
-            'Precisa de suporte com compras, dúvidas sobre produtos, parcerias ou denúncias? ' +
-            'Clique no botão abaixo para abrir seu canal privativo com nossa equipe.\n\n' +
-            '• 🛡️ **Atendimento Privativo:** Somente você e nossa Staff têm acesso.\n' +
-            '• 🕒 **Horário:** Conforme disponibilidade dos atendentes.\n' +
-            '• 📝 **Histórico Seguro:** Todas as conversas são registradas em logs com transcript.'
+            'Precisa de ajuda ou quer reportar uma infração?\n\n' +
+            'Escolha a opção abaixo para abrir o seu ticket:\n\n' +
+            '• **Compra:** Dúvidas, entregas ou encomendas.\n' +
+            '• **Denúncia:** Scam, fraudes ou violação de regras.\n' +
+            '• **Servidor:** Dúvidas gerais e sugestões.\n\n' +
+            '*(Ticket de Denúncia)*\n' +
+            '🚨 **PAINEL DE DENÚNCIAS**\n' +
+            'Para analisarmos o seu caso, envie no chat:\n\n' +
+            '**Nick do acusado (Roblox/Discord):**\n' +
+            '**Descrição do ocorrido:**\n' +
+            '**Provas (Prints ou vídeo): (Obrigatório)**\n\n' +
+            '⏳ *Aguarde um momento. Um administrador atenderá você em breve.*'
         )
-        .setFooter({ text: 'Kensai Store • Atendimento Oficial' });
+        .setFooter({ text: 'Kensai store' });
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
+            .setCustomId('ticket_abrir_compra')
+            .setLabel('Compra')
+            .setEmoji('🛒')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
             .setCustomId('ticket_abrir_suporte')
-            .setLabel('Abrir Ticket de Suporte')
-            .setEmoji('🎫')
-            .setStyle(ButtonStyle.Primary)
+            .setLabel('Suporte geral')
+            .setEmoji('🔎')
+            .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+            .setCustomId('ticket_abrir_denuncia')
+            .setLabel('Denúncia')
+            .setEmoji('🚨')
+            .setStyle(ButtonStyle.Danger)
     );
 
     return { embeds: [embed], components: [row] };
