@@ -174,16 +174,13 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
         })
         .setTitle('💳 Cobrança Pix • R$ ' + valorBonito)
         .setDescription(
-            '> ⚡ **Pagamento Imediato:** Escaneie o QR Code abaixo pelo app do seu banco ou copie o código Pix abaixo.\n' +
+            '> ⚡ **Pagamento Imediato:** Escaneie o QR Code abaixo pelo app do seu banco ou copie o código Pix enviado logo abaixo.\n' +
             '> 🛡️ **Garantia Kensai:** Procedência 100% auditada. Após o pagamento, envie o comprovante neste canal!\n\n' +
             '• 💰 **Valor a Pagar:** `' + 'R$ ' + valorBonito + '`\n' +
             '• 👤 **Pagador Identificado:** ' + userMention + '\n' +
             '• 🔑 **Chave Pix Oficial:** `' + dadosPix.chave + '`\n' +
             '• 🏢 **Beneficiário:** `Carollina Fernandez`\n' +
-            '• 🏦 **Banco / Instituição:** `Mercado Pago`\n\n' +
-            '──────────────────────────────────────────\n' +
-            '📋 **Pix Copia e Cola:**\n' +
-            '```\n' + dadosPix.payloadPix + '\n```'
+            '• 🏦 **Banco / Instituição:** `Mercado Pago`'
         )
         .setImage('attachment://pix_qrcode.png')
         .setFooter({ text: 'Kensai Store • A lâmina mais afiada do atendimento' })
