@@ -64,7 +64,7 @@ const DEFAULT_TOKENS = {
     categoria_id: null,
     canal_logs_id: null,
     cargo_staff_id: null,
-    chave_pix: 'financeiro@kensaistore.com',
+    chave_pix: 'kensai.store.oficial@gmail.com',
     canal_painel_id: null,
     mensagem_painel_id: null
 };
