@@ -71,7 +71,8 @@ module.exports = {
                 components: cobranca.components
             });
 
-            await message.channel.send('```\n' + cobranca.payloadPix + '\n```').catch(() => {});
+            // Envia o código Copia e Cola limpo como mensagem normal
+            await message.channel.send(cobranca.payloadPix).catch(() => {});
         } catch (err) {
             console.error('Erro ao gerar cobrança Pix via prefixo:', err);
             return message.reply('❌ Ocorreu um erro ao gerar a cobrança Pix.');

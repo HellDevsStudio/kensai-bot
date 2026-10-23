@@ -35,7 +35,11 @@ function crc16(data) {
     return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
 }
 
-function gerarPixPayload({ chave, valor, nome = 'KENSAI STORE', cidade = 'SAO PAULO' }) {
+function normalizarTextoPix(str) {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+}
+
+function gerarPixPayload({ chave, valor, nome = 'CAROLLINA FERNANDEZ', cidade = 'SAO PAULO' }) {
     const valorNum = typeof valor === 'string'
         ? parseFloat(valor.replace(/[^0-9,\.]/g, '').replace(',', '.'))
         : Number(valor);
@@ -46,8 +50,8 @@ function gerarPixPayload({ chave, valor, nome = 'KENSAI STORE', cidade = 'SAO PA
 
     const valorFormatado = valorNum.toFixed(2);
     const chaveLimpa = (chave || getTokensConfig().chave_pix || 'kensai.store.oficial@gmail.com').trim();
-    const nomeLimpo = (nome || 'KENSAI STORE').trim().slice(0, 25);
-    const cidadeLimpa = (cidade || 'SAO PAULO').trim().slice(0, 15);
+    const nomeLimpo = normalizarTextoPix(nome || 'CAROLLINA FERNANDEZ').slice(0, 25);
+    const cidadeLimpa = normalizarTextoPix(cidade || 'SAO PAULO').slice(0, 15);
 
     const gui = '0014br.gov.bcb.pix';
     const subChave = '01' + chaveLimpa.length.toString().padStart(2, '0') + chaveLimpa;
@@ -77,7 +81,9 @@ function gerarPixPayload({ chave, valor, nome = 'KENSAI STORE', cidade = 'SAO PA
         valorFormatado,
         valorNum,
         chave: chaveLimpa,
-        nome: nomeLimpo,
+        nome: 'Carollina Fernandez',
+        nomeEmv: nomeLimpo,
+        banco: 'Mercado Pago',
         cidade: cidadeLimpa
     };
 }
@@ -158,7 +164,7 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
         criadoEm: Date.now()
     });
 
-    const userMention = targetUserId ? ('<@' + targetUserId + '>') : '`Nao especificado`';
+    const userMention = targetUserId ? ('<@' + targetUserId + '>') : '`Não especificado`';
 
     const embed = new EmbedBuilder()
         .setColor(config.EMBED_COLOR || 0x9a2ea6)
@@ -168,13 +174,13 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
         })
         .setTitle('💳 Cobrança Pix • R$ ' + valorBonito)
         .setDescription(
-            '> ⚡ **Pagamento Imediato:** Escaneie o QR Code abaixo pelo app do seu banco ou use os botões abaixo.\n' +
+            '> ⚡ **Pagamento Imediato:** Escaneie o QR Code abaixo pelo app do seu banco ou copie o código Pix abaixo.\n' +
             '> 🛡️ **Garantia Kensai:** Procedência 100% auditada. Após o pagamento, envie o comprovante neste canal!\n\n' +
             '• 💰 **Valor a Pagar:** `' + 'R$ ' + valorBonito + '`\n' +
             '• 👤 **Pagador Identificado:** ' + userMention + '\n' +
             '• 🔑 **Chave Pix Oficial:** `' + dadosPix.chave + '`\n' +
-            '• 🏢 **Beneficiário:** `' + dadosPix.nome + '`\n' +
-            '• 🏦 **Tipo / Banco:** `E-mail • Banco Central do Brasil`\n\n' +
+            '• 🏢 **Beneficiário:** `Carollina Fernandez`\n' +
+            '• 🏦 **Banco / Instituição:** `Mercado Pago`\n\n' +
             '──────────────────────────────────────────\n' +
             '📋 **Pix Copia e Cola:**\n' +
             '```\n' + dadosPix.payloadPix + '\n```'
@@ -204,6 +210,8 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
                 ticket.valorCobrado = dadosPix.valorNum;
                 ticket.clienteId = targetUserId || ticket.userId;
                 ticket.pixCopiaECola = dadosPix.payloadPix;
+                ticket.pixBeneficiario = 'Carollina Fernandez';
+                ticket.pixBanco = 'Mercado Pago';
                 ticket.pixGeradoEm = Date.now();
                 ativos[ticket.protocolo] = ticket;
                 writeData('tickets_ativos', ativos);
@@ -217,6 +225,8 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
         components: [row],
         payloadPix: dadosPix.payloadPix,
         chave: dadosPix.chave,
+        beneficiario: 'Carollina Fernandez',
+        banco: 'Mercado Pago',
         valorBonito,
         userMention
     };
@@ -231,7 +241,7 @@ async function handlePixButton(interaction) {
 
         if (!data) {
             return interaction.reply({
-                content: '⚠️ Este código Pix expirou do cache rápido. Copie diretamente do bloco na mensagem do canal.',
+                content: '⚠️ Este código Pix expirou do cache rápido. Copie diretamente da mensagem no canal.',
                 flags: [MessageFlags.Ephemeral]
             });
         }

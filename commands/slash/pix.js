@@ -90,7 +90,8 @@ module.exports = {
                 components: cobranca.components
             });
 
-            await interaction.channel.send('```\n' + cobranca.payloadPix + '\n```').catch(() => {});
+            // Envia o código Copia e Cola limpo como mensagem normal
+            await interaction.channel.send(cobranca.payloadPix).catch(() => {});
         } catch (err) {
             console.error('Erro ao gerar cobrança Pix:', err);
             return interaction.editReply({
