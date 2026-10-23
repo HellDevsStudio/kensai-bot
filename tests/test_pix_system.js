@@ -79,8 +79,8 @@ async function testPixSystem() {
 
     // 6. Teste da Imagem Oficial de Confirmação
     console.log('Verificando asset de confirmação do Pix...');
-    const assetPath = path.join(__dirname, '../kensai_assets/e01e6c55-ffcc-4e88-81b7-cb7857f0d71f.png');
-    assert.ok(fs.existsSync(assetPath), 'Arquivo e01e6c55-ffcc-4e88-81b7-cb7857f0d71f.png deve existir');
+    const assetPath = path.join(__dirname, '../kensai_assets/Desire_for_him_and_money_20261023185045.png');
+    assert.ok(fs.existsSync(assetPath), 'Arquivo Desire_for_him_and_money_20261023185045.png deve existir');
     console.log('  Asset de confirmação verificado com sucesso.');
 
     // 7. Teste de Permissão de Staff no Botão Confirmar Pix

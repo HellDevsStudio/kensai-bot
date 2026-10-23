@@ -319,7 +319,7 @@ async function handlePixButton(interaction) {
         const userMention = targetUserId ? ('<@' + targetUserId + '>') : '`Cliente`';
 
         // Imagem oficial de confirmação Kensai
-        const assetPath = path.join(__dirname, '../kensai_assets/e01e6c55-ffcc-4e88-81b7-cb7857f0d71f.png');
+        const assetPath = path.join(__dirname, '../kensai_assets/Desire_for_him_and_money_20261023185045.png');
         if (!fs.existsSync(assetPath)) {
             console.error('Arquivo de imagem de confirmação não encontrado em:', assetPath);
             return interaction.reply({
