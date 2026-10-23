@@ -98,11 +98,18 @@ runTest('6. Painel de Tokens reflete preço dinâmico e opções de compra', () 
     assert.strictEqual(btn.data.custom_id, 'token_comprar_custom');
 });
 
-runTest('7. Painel de Itens gera Select com opções ativas do catálogo', () => {
-    const payload = gerarPainelItensPayload();
+runTest('7. Painel de Itens gera Select menu_categoria_item com 5 categorias Kensai Store', () => {
+    const payload = gerarPainelItensPayload({ name: 'Kensai Test Guild' });
     const select = payload.components[0].components[0];
-    assert.strictEqual(select.data.custom_id, 'item_comprar_select');
-    assert.ok(select.options.length >= 3);
+    const selectData = typeof select.toJSON === 'function' ? select.toJSON() : select.data;
+    assert.strictEqual(selectData.custom_id, 'menu_categoria_item');
+    assert.strictEqual(selectData.options.length, 5);
+    const values = selectData.options.map(o => o.value);
+    assert.ok(values.includes('Espada'));
+    assert.ok(values.includes('Emote'));
+    assert.ok(values.includes('Explosão'));
+    assert.ok(values.includes('Limitados'));
+    assert.ok(values.includes('Personalizado'));
 });
 
 // 3. Funções do Ticket Core & Formatação de Logs de Staff

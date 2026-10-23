@@ -11,6 +11,7 @@ const {
     MessageFlags 
 } = require('discord.js');
 const { criarEmbedPadrao } = require('./embeds');
+const { lerEstoque } = require('./itemControl');
 const { 
     getSuporteConfig, setSuporteConfig, 
     getTokensConfig, setTokensConfig, 
@@ -55,11 +56,15 @@ function gerarPainelPrincipal(statusNotice) {
                 inline: false
             },
             {
-                name: '⚔️ 3. Catálogo de Itens (`itens.json`)',
-                value: '• **Itens Ativos:** `' + (itn.itens ? itn.itens.length : 0) + ' produtos cadastrados`\n' +
-                       '• **Categoria:** ' + (itn.categoria_id ? '<#' + itn.categoria_id + '>' : '❌ *Não configurada*') + '\n' +
-                       '• **Canal de Logs:** ' + (itn.canal_logs_id ? '<#' + itn.canal_logs_id + '>' : '❌ *Não configurado*') + '\n' +
-                       '• **Cargo Staff:** ' + (itn.cargo_staff_id ? '<@&' + itn.cargo_staff_id + '>' : '❌ *Não configurado*'),
+                name: '⚔️ 3. Arsenal de Itens Blade Ball (`estoque.json`)',
+                value: (() => {
+                    const estoque = typeof lerEstoque === 'function' ? lerEstoque() : [];
+                    const totalUnidades = estoque.reduce((acc, i) => acc + (Number(i.quantidade) || 0), 0);
+                    return '• **Estoque Ativo:** `' + estoque.length + ' produtos cadastrados (' + totalUnidades + ' unid.)`\n' +
+                           '• **Categoria:** ' + (itn.categoria_id ? '<#' + itn.categoria_id + '>' : '❌ *Não configurada*') + '\n' +
+                           '• **Canal de Logs:** ' + (itn.canal_logs_id ? '<#' + itn.canal_logs_id + '>' : '❌ *Não configurado*') + '\n' +
+                           '• **Cargo Staff:** ' + (itn.cargo_staff_id ? '<@&' + itn.cargo_staff_id + '>' : '❌ *Não configurado*');
+                })(),
                 inline: false
             }
         )
@@ -215,17 +220,20 @@ function gerarPainelTokensConfig(statusNotice) {
  */
 function gerarPainelItensConfig(statusNotice) {
     const itn = getItensConfig();
+    const estoque = typeof lerEstoque === 'function' ? lerEstoque() : [];
+    const totalUnidades = estoque.reduce((acc, i) => acc + (Number(i.quantidade) || 0), 0);
 
-    const embed = criarEmbedPadrao('⚙️ Configuração • Catálogo de Itens')
+    const embed = criarEmbedPadrao('⚔️ Configuração • Arsenal de Itens Blade Ball')
         .setDescription(
             (statusNotice ? statusNotice + '\n\n' : '') +
-            'Defina onde os pedidos do **Catálogo de Itens** serão abertos e registrados:\n\n' +
-            '⚔️ **Itens Cadastrados:** `' + (itn.itens ? itn.itens.length : 0) + ' produtos cadastrados em itens.json`\n' +
+            'Defina onde os tickets do **Arsenal de Blade Ball (Kensai Store)** serão abertos e registrados:\n\n' +
+            '⚔️ **Estoque Atual:** `' + estoque.length + ' itens cadastrados (' + totalUnidades + ' unidades disponíveis)`\n' +
             '📁 **Categoria Atual:** ' + (itn.categoria_id ? '<#' + itn.categoria_id + '>' : '❌ *Nenhuma*') + '\n' +
             '📜 **Canal de Logs Atual:** ' + (itn.canal_logs_id ? '<#' + itn.canal_logs_id + '>' : '❌ *Nenhum*') + '\n' +
-            '🛡️ **Cargo Staff Atual:** ' + (itn.cargo_staff_id ? '<@&' + itn.cargo_staff_id + '>' : '❌ *Nenhum*')
+            '🛡️ **Cargo Staff Atual:** ' + (itn.cargo_staff_id ? '<@&' + itn.cargo_staff_id + '>' : '❌ *Nenhum*') + '\n\n' +
+            '💡 *Use os menus abaixo para selecionar os canais/cargos e o botão para fixar o painel para os clientes:*'
         )
-        .setFooter({ text: 'Selecione as opções nos menus abaixo para atualizar' });
+        .setFooter({ text: 'Kensai Store • Sistema Oficial de Arsenal Blade Ball' });
 
     const rowCat = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
@@ -250,9 +258,14 @@ function gerarPainelItensConfig(statusNotice) {
     const rowBotoes = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('cfg_send_panel_itens')
-            .setLabel('Enviar Catálogo de Itens Aqui')
-            .setEmoji('📢')
+            .setLabel('Enviar Arsenal de Itens Aqui')
+            .setEmoji('⚔️')
             .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_guia_itens')
+            .setLabel('Guia de Comandos & Estoque')
+            .setEmoji('📦')
+            .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
             .setCustomId('cfg_nav_home')
             .setLabel('Voltar ao Menu')
@@ -454,11 +467,30 @@ async function handleConfigInteraction(interaction) {
     }
 
     if (cid === 'cfg_send_panel_itens') {
-        const payload = gerarPainelItensPayload();
+        const payload = gerarPainelItensPayload(interaction.guild);
         const msg = await interaction.channel.send(payload);
         setItensConfig({ canal_painel_id: interaction.channel.id, mensagem_painel_id: msg.id });
         return interaction.reply({
-            content: '✅ **Catálogo de Itens** enviado com sucesso neste canal!',
+            content: '⚔️ **Arsenal de Itens Blade Ball (Kensai Store)** enviado com sucesso neste canal!',
+            flags: [MessageFlags.Ephemeral]
+        });
+    }
+
+    if (cid === 'cfg_btn_guia_itens') {
+        const embedGuia = criarEmbedPadrao('📦 Guia de Comandos do Arsenal • Kensai Store')
+            .setDescription(
+                'Confira abaixo os comandos disponíveis para a Staff gerenciar o catálogo e o estoque:\n\n' +
+                '• `/item adicionar` ➔ Adiciona itens com auto-detecção em +2.100 espadas, emotes e explosões!\n' +
+                '• `/item estoque` ➔ Atualiza a quantidade disponível de qualquer item.\n' +
+                '• `/item preco` ➔ Altera o valor de venda (R$) de um item.\n' +
+                '• `/item remover` ➔ Remove um item do catálogo.\n' +
+                '• `/item listar` ➔ Exibe todos os itens cadastrados por categoria e estoque.\n\n' +
+                '💡 *Para publicar o painel para os membros comprarem, utilize o botão **Enviar Arsenal de Itens Aqui**.*'
+            )
+            .setFooter({ text: 'Kensai Store • Painel de Gestão Staff' });
+
+        return interaction.reply({
+            embeds: [embedGuia],
             flags: [MessageFlags.Ephemeral]
         });
     }

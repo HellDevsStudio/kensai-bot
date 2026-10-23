@@ -1,3 +1,4 @@
+const { gerarPainelItensPayload: gerarPainelItensKensai } = require('./renderItensPanel');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { criarEmbedPadrao } = require('./embeds');
 const { getSuporteConfig, getTokensConfig, getItensConfig } = require('./ticketConfigs');
@@ -113,49 +114,8 @@ function gerarPainelTokensPayload() {
 /**
  * Gera payload do Painel de Itens Oficial
  */
-function gerarPainelItensPayload() {
-    const config = getItensConfig();
-    const itens = config.itens || [];
-
-    const embed = criarEmbedPadrao('⚔️ Catálogo de Itens • Kensai Store')
-        .setDescription(
-            'Explore e adquira nossos itens exclusivos, katanas, sets e passes especiais!\n\n' +
-            'Selecione um item no menu abaixo para abrir seu carrinho e falar diretamente com nossa equipe de entrega:'
-        )
-        .setFooter({ text: 'Kensai Store • Catálogo Oficial' });
-
-    itens.forEach(function(item) {
-        embed.addFields({
-            name: '⚔️ ' + item.nome + ' — ' + item.preco,
-            value: item.descricao || 'Sem descrição detalhada.',
-            inline: false
-        });
-    });
-
-    const selectOptions = itens.slice(0, 25).map(function(item) {
-        return {
-            label: item.nome.slice(0, 100),
-            description: (item.preco + ' • ' + (item.descricao || '')).slice(0, 100),
-            value: item.id,
-            emoji: '⚔️'
-        };
-    });
-
-    if (selectOptions.length === 0) {
-        selectOptions.push({
-            label: 'Nenhum item cadastrado',
-            description: 'Configure itens usando /config itens',
-            value: 'vazio'
-        });
-    }
-
-    const select = new StringSelectMenuBuilder()
-        .setCustomId('item_comprar_select')
-        .setPlaceholder('Selecione o item que deseja comprar...')
-        .addOptions(selectOptions);
-
-    const row = new ActionRowBuilder().addComponents(select);
-    return { embeds: [embed], components: [row] };
+function gerarPainelItensPayload(guild) {
+    return gerarPainelItensKensai(guild);
 }
 
 module.exports = {
