@@ -1,4 +1,6 @@
 const QRCode = require('qrcode');
+const path = require('path');
+const fs = require('fs');
 const {
     EmbedBuilder,
     ActionRowBuilder,
@@ -8,12 +10,15 @@ const {
     PermissionsBitField,
     MessageFlags
 } = require('discord.js');
-const { getTokensConfig } = require('./ticketConfigs');
+const { getTokensConfig, getItensConfig, getSuporteConfig } = require('./ticketConfigs');
+const { isStaff, checkPermission } = require('./permissions');
 const { readData, writeData } = require('./db');
 const config = require('../config');
 
+// Armazena payloads temporários para botões e controle de cobrança
 const pixPayloadsCache = new Map();
 
+// Limpeza automática de cache a cada 30 minutos
 setInterval(() => {
     const agora = Date.now();
     for (const [id, item] of pixPayloadsCache.entries()) {
@@ -39,13 +44,26 @@ function normalizarTextoPix(str) {
     return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 }
 
+function ehStaffAutorizado(member) {
+    if (!member) return false;
+    if (member.permissions && member.permissions.has(PermissionsBitField.Flags.Administrator)) return true;
+    if (isStaff(member) || checkPermission(member, PermissionsBitField.Flags.ManageMessages)) {
+        return true;
+    }
+    const tok = getTokensConfig();
+    const itn = getItensConfig();
+    const sup = getSuporteConfig();
+    const staffRoles = [tok.cargo_staff_id, itn.cargo_staff_id, sup.cargo_staff_id].filter(Boolean);
+    return staffRoles.some(rId => member.roles && member.roles.cache && member.roles.cache.has(rId));
+}
+
 function gerarPixPayload({ chave, valor, nome = 'CAROLLINA FERNANDEZ', cidade = 'SAO PAULO' }) {
     const valorNum = typeof valor === 'string'
         ? parseFloat(valor.replace(/[^0-9,\.]/g, '').replace(',', '.'))
         : Number(valor);
 
     if (isNaN(valorNum) || valorNum <= 0) {
-        throw new Error('Valor invalido para cobranca Pix');
+        throw new Error('Valor inválido para cobrança Pix');
     }
 
     const valorFormatado = valorNum.toFixed(2);
@@ -161,6 +179,9 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
         payloadPix: dadosPix.payloadPix,
         chave: dadosPix.chave,
         valor: valorBonito,
+        valorNum: dadosPix.valorNum,
+        targetUserId: targetUserId || null,
+        channelId: channelId || null,
         criadoEm: Date.now()
     });
 
@@ -196,7 +217,12 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
             .setCustomId('btn_chave_pix_' + tempId)
             .setLabel('Copiar Apenas a Chave')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🔑')
+            .setEmoji('🔑'),
+        new ButtonBuilder()
+            .setCustomId('btn_confirmar_pix_' + tempId)
+            .setLabel('Confirmar Pix')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('✅')
     );
 
     if (channelId) {
@@ -210,6 +236,7 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
                 ticket.pixBeneficiario = 'Carollina Fernandez';
                 ticket.pixBanco = 'Mercado Pago';
                 ticket.pixGeradoEm = Date.now();
+                ticket.pixConfirmado = false;
                 ativos[ticket.protocolo] = ticket;
                 writeData('tickets_ativos', ativos);
             }
@@ -232,6 +259,7 @@ async function gerarCobrancaPixPayload({ valor, targetUserId, guild, channelId, 
 async function handlePixButton(interaction) {
     const cid = interaction.customId;
 
+    // 1. Botão de Copiar Código Pix
     if (cid.startsWith('btn_copiar_pix_')) {
         const tempId = cid.replace('btn_copiar_pix_', '');
         const data = pixPayloadsCache.get(tempId);
@@ -249,6 +277,7 @@ async function handlePixButton(interaction) {
         });
     }
 
+    // 2. Botão de Copiar Chave Pix
     if (cid.startsWith('btn_chave_pix_')) {
         const tempId = cid.replace('btn_chave_pix_', '');
         const data = pixPayloadsCache.get(tempId);
@@ -258,6 +287,104 @@ async function handlePixButton(interaction) {
             content: chave,
             flags: [MessageFlags.Ephemeral]
         });
+    }
+
+    // 3. Botão de Confirmar Pix (Apenas Staff)
+    if (cid.startsWith('btn_confirmar_pix_')) {
+        if (!ehStaffAutorizado(interaction.member)) {
+            return interaction.reply({
+                content: '❌ **Acesso negado:** Apenas membros da Staff podem confirmar pagamentos via Pix!',
+                flags: [MessageFlags.Ephemeral]
+            });
+        }
+
+        const tempId = cid.replace('btn_confirmar_pix_', '');
+        const data = pixPayloadsCache.get(tempId);
+
+        let valorBonito = data ? data.valor : null;
+        let targetUserId = data ? data.targetUserId : null;
+
+        // Fallback: extrai do embed da mensagem se cache expirou
+        const embedOriginal = interaction.message?.embeds?.[0];
+        if (!valorBonito && embedOriginal?.title) {
+            const matchValor = embedOriginal.title.match(/R\$\s*([0-9.,]+)/i);
+            if (matchValor) valorBonito = matchValor[1];
+        }
+        if (!targetUserId && embedOriginal?.description) {
+            const matchUser = embedOriginal.description.match(/<@(\d+)>/);
+            if (matchUser) targetUserId = matchUser[1];
+        }
+        if (!valorBonito) valorBonito = '0,00';
+
+        const userMention = targetUserId ? ('<@' + targetUserId + '>') : '`Cliente`';
+
+        // Imagem oficial de confirmação Kensai
+        const assetPath = path.join(__dirname, '../kensai_assets/e01e6c55-ffcc-4e88-81b7-cb7857f0d71f.png');
+        if (!fs.existsSync(assetPath)) {
+            console.error('Arquivo de imagem de confirmação não encontrado em:', assetPath);
+            return interaction.reply({
+                content: '❌ Imagem de confirmação não encontrada no servidor.',
+                flags: [MessageFlags.Ephemeral]
+            });
+        }
+
+        const attachmentConfirmado = new AttachmentBuilder(assetPath, { name: 'pix_confirmado.png' });
+
+        const embedConfirmado = new EmbedBuilder()
+            .setColor(0x22c55e)
+            .setAuthor({
+                name: '⛩️ KENSAI STORE • PAGAMENTO CONFIRMADO',
+                iconURL: interaction.guild?.iconURL ? interaction.guild.iconURL({ dynamic: true }) : undefined
+            })
+            .setTitle('✅ Pagamento Confirmado • R$ ' + valorBonito)
+            .setDescription(
+                '> 🛡️ **Garantia Kensai:** Procedência 100% auditada. O pagamento foi validado com sucesso pela nossa equipe!\n\n' +
+                '• 💵 **Valor Confirmado:** `' + 'R$ ' + valorBonito + '`\n' +
+                '• 👤 **Cliente:** ' + userMention + '\n' +
+                '• 👮 **Confirmado por:** ' + interaction.user.toString() + '\n' +
+                '• 🏢 **Beneficiário:** `Carollina Fernandez`\n' +
+                '• 🏦 **Banco / Instituição:** `Mercado Pago`\n' +
+                '• ⏰ **Confirmado em:** <t:' + Math.floor(Date.now() / 1000) + ':f>'
+            )
+            .setImage('attachment://pix_confirmado.png')
+            .setFooter({ text: 'Kensai Store • Pagamento Aprovado com Sucesso' })
+            .setTimestamp();
+
+        const rowConfirmado = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('btn_pix_confirmado_ok')
+                .setLabel('Confirmado por ' + interaction.user.username)
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('✅')
+                .setDisabled(true)
+        );
+
+        // Atualiza a mensagem original substituindo o QR Code pela imagem aprovada
+        await interaction.update({
+            embeds: [embedConfirmado],
+            files: [attachmentConfirmado],
+            components: [rowConfirmado]
+        });
+
+        // Atualiza banco do ticket
+        const channelId = interaction.channelId;
+        try {
+            const ativos = readData('tickets_ativos', {});
+            const ticket = Object.values(ativos).find(t => t.channelId === channelId);
+            if (ticket) {
+                ticket.statusCompra = 'APROVADO';
+                ticket.pixConfirmado = true;
+                ticket.aprovadoPor = interaction.user.id;
+                ticket.aprovadoEm = Date.now();
+                ativos[ticket.protocolo] = ticket;
+                writeData('tickets_ativos', ativos);
+            }
+        } catch (_) {}
+
+        // Notifica no canal
+        await interaction.channel.send({
+            content: '🎉 ' + userMention + ', seu pagamento via Pix de **R$ ' + valorBonito + '** foi **confirmado** por ' + interaction.user.toString() + '!'
+        }).catch(() => {});
     }
 }
 

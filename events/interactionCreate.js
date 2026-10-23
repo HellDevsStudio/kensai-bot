@@ -99,7 +99,7 @@ module.exports = {
             // Interações de Itens Blade Ball
             // Botões de Confirmação de Cadastro de Itens (Preview Semântica)
             // Botões de Pix (Copiar Código e Copiar Chave)
-            if (cid.startsWith('btn_copiar_pix_') || cid.startsWith('btn_chave_pix_')) {
+            if (cid.startsWith('btn_copiar_pix_') || cid.startsWith('btn_chave_pix_') || cid.startsWith('btn_confirmar_pix_')) {
                 const { handlePixButton } = require('../utils/pix');
                 return handlePixButton(interaction);
             }

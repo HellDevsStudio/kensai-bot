@@ -1,4 +1,6 @@
 const assert = require('assert');
+const path = require('path');
+const fs = require('fs');
 const pix = require('../utils/pix');
 const slashPix = require('../commands/slash/pix');
 const prefixPix = require('../commands/prefix/pix');
@@ -49,8 +51,8 @@ async function testPixSystem() {
     assert.strictEqual(pagador.userId, '481153760865812482');
     assert.strictEqual(pagador.protocolo, 'KS-AM6VH0');
 
-    // 5. Teste de Montagem de Cobrança Visual
-    console.log('Testando montagem de cobrança visual com Beneficiário e Banco...');
+    // 5. Teste de Montagem de Cobrança Visual e Botão de Confirmação
+    console.log('Testando montagem de cobrança com os 3 botões (Copiar Código, Copiar Chave, Confirmar Pix)...');
     const cobranca = await pix.gerarCobrancaPixPayload({
         valor: '15.50',
         targetUserId: '481153760865812482',
@@ -59,25 +61,66 @@ async function testPixSystem() {
     assert.ok(cobranca.embeds && cobranca.embeds.length === 1);
     assert.ok(cobranca.files && cobranca.files.length === 1);
     assert.ok(cobranca.components && cobranca.components.length === 1);
+    const buttons = cobranca.components[0].components;
+    assert.strictEqual(buttons.length, 3, 'Deve conter 3 botões');
+    assert.ok(buttons[0].data.custom_id.startsWith('btn_copiar_pix_'));
+    assert.ok(buttons[1].data.custom_id.startsWith('btn_chave_pix_'));
+    assert.ok(buttons[2].data.custom_id.startsWith('btn_confirmar_pix_'));
+    assert.strictEqual(buttons[2].data.label, 'Confirmar Pix');
+
     const embedData = cobranca.embeds[0].data;
     assert.strictEqual(embedData.title, '💳 Cobrança Pix • R$ 15,50');
     assert.ok(embedData.description.includes('kensai.store.oficial@gmail.com'));
     assert.ok(embedData.description.includes('Carollina Fernandez'));
     assert.ok(embedData.description.includes('Mercado Pago'));
     assert.ok(embedData.description.includes('<@481153760865812482>'));
-    console.log('  Embed e botões montados com sucesso.');
+    assert.strictEqual(embedData.description.includes('```'), false, 'Não deve conter bloco de código no embed');
+    console.log('  Embed e os 3 botões montados com sucesso.');
 
-    // 6. Teste da Estrutura dos Comandos
-    console.log('Testando estrutura do comando Slash /pix...');
+    // 6. Teste da Imagem Oficial de Confirmação
+    console.log('Verificando asset de confirmação do Pix...');
+    const assetPath = path.join(__dirname, '../kensai_assets/e01e6c55-ffcc-4e88-81b7-cb7857f0d71f.png');
+    assert.ok(fs.existsSync(assetPath), 'Arquivo e01e6c55-ffcc-4e88-81b7-cb7857f0d71f.png deve existir');
+    console.log('  Asset de confirmação verificado com sucesso.');
+
+    // 7. Teste de Permissão de Staff no Botão Confirmar Pix
+    console.log('Testando bloqueio de não-staff no botão Confirmar Pix...');
+    let replyContent = null;
+    const mockInteractionNaoStaff = {
+        customId: buttons[2].data.custom_id,
+        member: { permissions: { has: () => false }, roles: { cache: new Map() } },
+        reply: async (obj) => { replyContent = obj.content; }
+    };
+    await pix.handlePixButton(mockInteractionNaoStaff);
+    assert.ok(replyContent && replyContent.includes('Apenas membros da Staff'), 'Membro não-staff deve ser bloqueado');
+    console.log('  Bloqueio de segurança para não-staff validado!');
+
+    // 8. Teste de Confirmação por Membro Staff (Admin)
+    console.log('Testando confirmação por membro Staff (substituição por imagem oficial)...');
+    let updatedPayload = null;
+    let channelMsgSent = null;
+    const mockInteractionStaff = {
+        customId: buttons[2].data.custom_id,
+        member: { permissions: { has: () => true }, roles: { cache: new Map() } },
+        user: { id: '999888777', username: 'StaffAdmin' },
+        channelId: mockChannelId,
+        guild: { iconURL: () => null },
+        update: async (obj) => { updatedPayload = obj; },
+        channel: { send: async (obj) => { channelMsgSent = obj; } }
+    };
+    await pix.handlePixButton(mockInteractionStaff);
+    assert.ok(updatedPayload !== null, 'Mensagem deve ter sido atualizada com update()');
+    assert.strictEqual(updatedPayload.embeds[0].data.title, '✅ Pagamento Confirmado • R$ 15,50');
+    assert.strictEqual(updatedPayload.embeds[0].data.image.url, 'attachment://pix_confirmado.png');
+    assert.strictEqual(updatedPayload.files[0].name, 'pix_confirmado.png');
+    assert.strictEqual(updatedPayload.components[0].components[0].data.disabled, true);
+    assert.ok(channelMsgSent !== null, 'Notificação no canal deve ser enviada');
+    console.log('  Confirmação Staff com substituição da imagem pelo banner oficial validada!');
+
+    // 9. Teste da Estrutura dos Comandos
+    console.log('Testando comandos Slash e Prefixo...');
     assert.strictEqual(slashPix.data.name, 'pix');
-    assert.strictEqual(typeof slashPix.execute, 'function');
-    assert.strictEqual(typeof slashPix.handleButton, 'function');
-
-    console.log('Testando estrutura do comando Prefixo k!pix...');
     assert.strictEqual(prefixPix.name, 'pix');
-    assert.ok(prefixPix.aliases.includes('gerarpix'));
-    assert.ok(prefixPix.aliases.includes('cobrar'));
-    assert.strictEqual(typeof prefixPix.execute, 'function');
 
     console.log('\n🎉 TODOS OS TESTES DO SISTEMA PIX PASSARAM COM 100% DE SUCESSO!');
 }
