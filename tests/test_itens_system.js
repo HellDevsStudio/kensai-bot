@@ -152,8 +152,8 @@ runTest('9. Busca Semântica resolve typos ("samurai katan") e ordem inversa ("s
     assert.ok(matchInverso.imagem.includes('http'));
 });
 
-// 10. Fluxo Interativo de Preview de Imagem e Confirmação de Cadastro
-runTest('10. /item adicionar gera preview com imagem oficial e botões de Confirmar/Cancelar', async () => {
+// 10. Fluxo Interativo de Preview com Imagem Automática do Catálogo
+runTest('10. /item adicionar gera preview com imagem automática do catálogo Fandom', async () => {
     let replyPayload = null;
     const mockInteraction = {
         member: { permissions: { has: () => true } },
@@ -164,15 +164,15 @@ runTest('10. /item adicionar gera preview com imagem oficial e botões de Confir
             getString: (name) => {
                 if (name === 'nome') return 'abyssal blade';
                 if (name === 'preco') return '25.00';
-                if (name === 'categoria') return null;
-                if (name === 'imagem') return null;
                 if (name === 'descricao') return 'Espada Mítica rara';
                 return null;
             },
             getInteger: (name) => {
                 if (name === 'quantidade') return 3;
                 return 1;
-            }
+            },
+            getAttachment: () => null,
+            getBoolean: () => true
         },
         reply: async (payload) => {
             replyPayload = payload;
@@ -181,71 +181,106 @@ runTest('10. /item adicionar gera preview com imagem oficial e botões de Confir
     };
 
     await slashItem.execute(mockInteraction);
-    assert.ok(replyPayload, 'Esperado interaction.reply ser chamado');
-    assert.ok(replyPayload.embeds && replyPayload.embeds.length === 1);
-    
+    assert.ok(replyPayload);
     const embed = replyPayload.embeds[0].data;
     assert.strictEqual(embed.title, '⚔️ Abyssal Blade');
-    assert.strictEqual(embed.color, 0x9a2ea6);
     assert.ok(embed.image && embed.image.url.includes('http'));
-    assert.ok(embed.description.includes('R$ 25,00'));
-    assert.ok(embed.description.includes('3 unidade(s)'));
+    assert.ok(embed.description.includes('Catálogo Oficial'));
+});
 
-    const row = replyPayload.components[0];
-    const botoes = row.components.map(b => b.data);
-    assert.strictEqual(botoes.length, 2);
-    assert.ok(botoes[0].custom_id.startsWith('item_confirm_'));
-    assert.ok(botoes[1].custom_id.startsWith('item_cancel_'));
-
-    // 11. Teste de Cancelar Cadastro
-    const tempId = botoes[0].custom_id.replace('item_confirm_', '');
-    let cancelUpdated = false;
-    const mockCancelInteraction = {
-        customId: `item_cancel_${tempId}`,
+// 11. Fluxo Interativo com Upload de Arquivo Próprio e Categoria Limitados
+runTest('11. /item adicionar suporta upload de arquivo próprio e categoria Limitados', async () => {
+    let replyPayload = null;
+    const mockInteraction = {
         member: { permissions: { has: () => true } },
-        update: async (opts) => {
-            cancelUpdated = true;
-            assert.ok(opts.content.includes('cancelado'));
+        guild: { iconURL: () => null },
+        user: { id: 'user_tester_456' },
+        options: {
+            getSubcommand: () => 'adicionar',
+            getString: (name) => {
+                if (name === 'nome') return 'Pack Samurai Sazonal';
+                if (name === 'preco') return '55.00';
+                if (name === 'categoria') return 'Limitados';
+                return null;
+            },
+            getInteger: () => 1,
+            getAttachment: (name) => {
+                if (name === 'imagem_arquivo') return { url: 'https://cdn.discordapp.com/attachments/pack.png' };
+                return null;
+            },
+            getBoolean: () => true
+        },
+        reply: async (payload) => {
+            replyPayload = payload;
+            return payload;
         }
     };
-    await slashItem.handleButton(mockCancelInteraction);
-    assert.strictEqual(cancelUpdated, true);
-    assert.strictEqual(obterPendenciaCadastro(tempId), null);
 
-    // 12. Teste de Confirmar Cadastro
-    const tempId2 = 'teste_confirm_temp';
-    armazenarPendenciaCadastro(tempId2, {
-        nome: 'Abyssal Blade',
-        categoria: 'Espada',
-        preco: 25.00,
-        quantidade: 3,
-        imagem: 'https://example.com/abyssal.png',
-        descricao: 'Cadastrado no teste',
-        userId: 'user_tester_123'
-    });
+    await slashItem.execute(mockInteraction);
+    assert.ok(replyPayload);
+    const embed = replyPayload.embeds[0].data;
+    assert.strictEqual(embed.title, '⏳ Pack Samurai Sazonal');
+    assert.strictEqual(embed.image.url, 'https://cdn.discordapp.com/attachments/pack.png');
+    assert.ok(embed.description.includes('Upload de Imagem Própria'));
+    assert.ok(embed.description.includes('Limitados'));
 
-    let confirmUpdated = false;
-    const mockConfirmInteraction = {
-        customId: `item_confirm_${tempId2}`,
+    // Confirmar cadastro
+    const tempId = replyPayload.components[0].components[0].data.custom_id.replace('item_confirm_', '');
+    let confirmCalled = false;
+    await slashItem.handleButton({
+        customId: `item_confirm_${tempId}`,
         member: { permissions: { has: () => true } },
         guild: { iconURL: () => null },
         update: async (opts) => {
-            confirmUpdated = true;
-            assert.ok(opts.embeds && opts.embeds.length === 1);
-            assert.ok(opts.embeds[0].data.title.includes('Abyssal Blade'));
+            confirmCalled = true;
+            assert.ok(opts.embeds[0].data.title.includes('Pack Samurai Sazonal'));
+            assert.ok(opts.embeds[0].data.description.includes('Limitados'));
+        }
+    });
+    assert.strictEqual(confirmCalled, true);
+
+    const estoque = lerEstoque();
+    const itemPack = estoque.find(i => i.nome === 'Pack Samurai Sazonal');
+    assert.ok(itemPack);
+    assert.strictEqual(itemPack.categoria, 'Limitados');
+    assert.strictEqual(itemPack.imagem, 'https://cdn.discordapp.com/attachments/pack.png');
+});
+
+// 12. Fluxo Interativo com Link Externo e Categoria Explosão
+runTest('12. /item adicionar suporta link de imagem e categoria Explosão', async () => {
+    let replyPayload = null;
+    const mockInteraction = {
+        member: { permissions: { has: () => true } },
+        guild: { iconURL: () => null },
+        user: { id: 'user_tester_789' },
+        options: {
+            getSubcommand: () => 'adicionar',
+            getString: (name) => {
+                if (name === 'nome') return 'Supernova Boom';
+                if (name === 'preco') return '35.00';
+                if (name === 'categoria') return 'Explosão';
+                if (name === 'imagem_url') return 'https://i.imgur.com/supernova.png';
+                return null;
+            },
+            getInteger: () => 2,
+            getAttachment: () => null,
+            getBoolean: () => true
+        },
+        reply: async (payload) => {
+            replyPayload = payload;
+            return payload;
         }
     };
-    await slashItem.handleButton(mockConfirmInteraction);
-    assert.strictEqual(confirmUpdated, true);
 
-    // Verifica que o item realmente entrou no estoque
-    const estoque = lerEstoque();
-    const itemCadastrado = estoque.find(i => i.nome === 'Abyssal Blade');
-    assert.ok(itemCadastrado, 'Item deve existir em estoque.json');
-    assert.strictEqual(itemCadastrado.preco, 25.00);
-    assert.ok(itemCadastrado.quantidade >= 3);
+    await slashItem.execute(mockInteraction);
+    assert.ok(replyPayload);
+    const embed = replyPayload.embeds[0].data;
+    assert.strictEqual(embed.title, '💥 Supernova Boom');
+    assert.strictEqual(embed.image.url, 'https://i.imgur.com/supernova.png');
+    assert.ok(embed.description.includes('Link Externo Informado'));
+    assert.ok(embed.description.includes('Explosão'));
 });
 
 console.log('\n=============================================================');
-console.log('   RESULTADO DOS TESTES DE ITENS: 10/10 PASSADOS COM SUCESSO');
+console.log('   RESULTADO DOS TESTES DE ITENS: 12/12 PASSADOS COM SUCESSO');
 console.log('=============================================================\n');

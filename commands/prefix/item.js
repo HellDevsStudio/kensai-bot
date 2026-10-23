@@ -55,9 +55,8 @@ module.exports = {
 
         // k!item add <nome> <preco> [qtd] [categoria]
         if (sub === 'add' || sub === 'adicionar') {
-            // Ex: k!item add Samurai Katana 15.00 2
             if (args.length < 3) {
-                return message.reply('❌ Formato: `k!item add <Nome do Item> <Preço R$> [Quantidade] [Categoria]`\nExemplo: `k!item add Samurai Katana 15.50 2 Espada`');
+                return message.reply('❌ Formato: `k!item add <Nome do Item> <Preço R$> [Quantidade] [Categoria]`\nExemplo: `k!item add Samurai Katana 15.50 2 Espada`\n💡 *Você também pode anexar uma imagem à mensagem para salvar como imagem própria!*');
             }
 
             const lastArg = args[args.length - 1];
@@ -68,10 +67,23 @@ module.exports = {
             let precoStr = '';
             let nomeArgs = [];
 
-            const categoriasValidas = ['espada', 'emote', 'explosão', 'explosao', 'limitados'];
-            if (categoriasValidas.includes(lastArg.toLowerCase())) {
-                categoria = lastArg.charAt(0).toUpperCase() + lastArg.slice(1).toLowerCase();
-                if (categoria === 'Explosao') categoria = 'Explosão';
+            const mapCats = {
+                'espada': 'Espada',
+                'espadas': 'Espada',
+                'katana': 'Espada',
+                'emote': 'Emote',
+                'emotes': 'Emote',
+                'explosão': 'Explosão',
+                'explosao': 'Explosão',
+                'explosoes': 'Explosão',
+                'limitados': 'Limitados',
+                'limitado': 'Limitados',
+                'pack': 'Limitados',
+                'packs': 'Limitados'
+            };
+
+            if (mapCats[lastArg.toLowerCase()]) {
+                categoria = mapCats[lastArg.toLowerCase()];
                 quantidade = parseInt(secondLastArg, 10) || 1;
                 precoStr = args[args.length - 3];
                 nomeArgs = args.slice(1, args.length - 3);
@@ -89,9 +101,32 @@ module.exports = {
                 return message.reply('❌ Nome e preço são obrigatórios!');
             }
 
-            const res = adicionarItemEstoque({ nome, categoria, preco: precoStr, quantidade });
+            // Suporte a imagem via anexo na mensagem do Discord
+            let imagem = null;
+            if (message.attachments && message.attachments.size > 0) {
+                imagem = message.attachments.first().url;
+            }
+
+            const res = adicionarItemEstoque({ nome, categoria, preco: precoStr, quantidade, imagem });
             const precoFormatado = Number(res.item.preco).toFixed(2).replace('.', ',');
-            return message.reply(`✅ Item **${res.item.nome}** ${res.atualizado ? 'atualizado' : 'adicionado'}! Preço: \`R$ ${precoFormatado}\` | Estoque: \`${res.item.quantidade}\` | Categoria: \`${res.item.categoria}\``);
+
+            const embed = new EmbedBuilder()
+                .setColor(config.EMBED_COLOR || 0x9a2ea6)
+                .setTitle(`✅ Item ${res.atualizado ? 'Atualizado' : 'Adicionado'} ao Estoque!`)
+                .setDescription(
+                    `• 🏷️ **Nome:** \`${res.item.nome}\`\n` +
+                    `• 📦 **Categoria:** \`${res.item.categoria}\`\n` +
+                    `• 💰 **Preço:** \`R$ ${precoFormatado}\`\n` +
+                    `• 🔢 **Quantidade:** \`${res.item.quantidade}\`\n` +
+                    `• 🆔 **ID:** \`${res.item.id}\`` +
+                    (res.item.imagem ? `\n• 🖼️ **Imagem:** [Visualizar](${res.item.imagem})` : '')
+                );
+
+            if (res.item.imagem) {
+                embed.setThumbnail(res.item.imagem);
+            }
+
+            return message.reply({ embeds: [embed] });
         }
 
         // k!item del <idOuNome>
