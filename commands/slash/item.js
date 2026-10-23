@@ -1,8 +1,20 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { 
+    SlashCommandBuilder, 
+    PermissionFlagsBits, 
+    EmbedBuilder, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    MessageFlags 
+} = require('discord.js');
 const { checkPermission, NO_PERMISSION_MSG } = require('../../utils/permissions');
 const {
     buscarCatalogoAutocomplete,
     buscarEstoqueAutocomplete,
+    buscarItemCatalogo,
+    armazenarPendenciaCadastro,
+    obterPendenciaCadastro,
+    removerPendenciaCadastro,
     adicionarItemEstoque,
     removerItemEstoque,
     atualizarQuantidadeEstoque,
@@ -20,10 +32,10 @@ module.exports = {
         // 1. Subcomando: Adicionar Item
         .addSubcommand(sub =>
             sub.setName('adicionar')
-                .setDescription('Adiciona ou abastece um item no estoque da loja.')
+                .setDescription('Adiciona ou abastece um item no estoque com prévia da imagem do catálogo.')
                 .addStringOption(opt =>
                     opt.setName('nome')
-                        .setDescription('Nome do item (digite para autocompletar do catálogo do Blade Ball)')
+                        .setDescription('Nome do item (digite para busca semântica no catálogo do Blade Ball)')
                         .setRequired(true)
                         .setAutocomplete(true)
                 )
@@ -43,7 +55,7 @@ module.exports = {
                         .setDescription('Categoria do item (auto-detectada se for do catálogo)')
                         .setRequired(false)
                         .addChoices(
-                            { name: '🗡️ Espada', value: 'Espada' },
+                            { name: '⚔️ Espada', value: 'Espada' },
                             { name: '🎭 Emote', value: 'Emote' },
                             { name: '💥 Explosão', value: 'Explosão' },
                             { name: '⏳ Limitados (Packs)', value: 'Limitados' }
@@ -113,7 +125,7 @@ module.exports = {
                         .setDescription('Filtrar por categoria específica')
                         .setRequired(false)
                         .addChoices(
-                            { name: '🗡️ Espadas', value: 'Espada' },
+                            { name: '⚔️ Espadas', value: 'Espada' },
                             { name: '🎭 Emotes', value: 'Emote' },
                             { name: '💥 Explosões', value: 'Explosão' },
                             { name: '⏳ Limitados', value: 'Limitados' }
@@ -145,37 +157,90 @@ module.exports = {
 
         const sub = interaction.options.getSubcommand();
 
-        // 1. ADICIONAR
+        // 1. ADICIONAR COM BUSCA SEMÂNTICA, PRÉVIA DA IMAGEM E BOTÕES DE CONFIRMAR / CANCELAR
         if (sub === 'adicionar') {
-            const nome = interaction.options.getString('nome');
-            const preco = interaction.options.getString('preco');
+            const nomeRaw = interaction.options.getString('nome');
+            const precoRaw = interaction.options.getString('preco');
             const quantidade = interaction.options.getInteger('quantidade') ?? 1;
-            const categoria = interaction.options.getString('categoria');
-            const imagem = interaction.options.getString('imagem');
-            const descricao = interaction.options.getString('descricao');
+            const categoriaRaw = interaction.options.getString('categoria');
+            const imagemRaw = interaction.options.getString('imagem');
+            const descricao = interaction.options.getString('descricao') || '';
 
-            const res = adicionarItemEstoque({ nome, categoria, preco, quantidade, imagem, descricao });
-            const item = res.item;
-            const precoStr = Number(item.preco).toFixed(2).replace('.', ',');
-
-            const embed = new EmbedBuilder()
-                .setColor(config.EMBED_COLOR || 0x9a2ea6)
-                .setTitle(res.atualizado ? '🔄 Item Atualizado no Estoque!' : '✅ Novo Item Adicionado ao Estoque!')
-                .setDescription(
-                    `• 🏷️ **Nome:** \`${item.nome}\`\n` +
-                    `• 📦 **Categoria:** \`${item.categoria}\`\n` +
-                    `• 💰 **Preço:** \`R$ ${precoStr}\`\n` +
-                    `• 🔢 **Quantidade:** \`${item.quantidade} unidade(s)\`\n` +
-                    `• 🆔 **ID:** \`${item.id}\`` +
-                    (item.descricao ? `\n• 📝 **Descrição:** ${item.descricao}` : '')
-                )
-                .setTimestamp();
-
-            if (item.imagem) {
-                embed.setThumbnail(item.imagem);
+            const precoLimpo = parseFloat(precoRaw.replace(/[^0-9,\.]/g, '').replace(',', '.'));
+            if (isNaN(precoLimpo) || precoLimpo <= 0) {
+                return interaction.reply({
+                    content: '❌ Valor de preço inválido. Por favor, informe um número válido (ex: `18.50` ou `18,50`).',
+                    flags: [MessageFlags.Ephemeral]
+                });
             }
 
-            return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+            // Realiza Busca Semântica no Catálogo Blade Ball Fandom
+            const match = buscarItemCatalogo(nomeRaw, categoriaRaw);
+            
+            const nomeFinal = match ? match.nome : nomeRaw.trim();
+            const categoriaFinal = categoriaRaw || (match ? match.categoria : 'Espada');
+            const imagemFinal = imagemRaw || (match ? match.imagem : null);
+            const precoStr = precoLimpo.toFixed(2).replace('.', ',');
+
+            const tempId = 'cad_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+
+            // Salva a pendência na memória
+            armazenarPendenciaCadastro(tempId, {
+                nome: nomeFinal,
+                categoria: categoriaFinal,
+                preco: precoLimpo,
+                quantidade: quantidade,
+                imagem: imagemFinal,
+                descricao: descricao,
+                userId: interaction.user.id
+            });
+
+            // Constrói o Card de Prévia no Estilo Kensai Store
+            const embed = new EmbedBuilder()
+                .setColor(config.EMBED_COLOR || 0x9a2ea6)
+                .setAuthor({ 
+                    name: '⛩️ KENSAI STORE • PRÉVIA DE CADASTRO NO ESTOQUE',
+                    iconURL: interaction.guild?.iconURL({ dynamic: true }) || undefined
+                })
+                .setTitle(`⚔️ ${nomeFinal}`)
+                .setDescription(
+                    (match 
+                        ? '> 💡 **Item identificado no Catálogo Oficial de Blade Ball via Busca Semântica!**\n' 
+                        : '> ⚠️ **Item personalizado avulso (não catalogado na Wiki oficial)**\n') +
+                    '> Verifique os dados e a imagem oficial abaixo antes de adicionar ao estoque.\n\n' +
+                    `• 🏷️ **Nome:** \`${nomeFinal}\`\n` +
+                    `• 📦 **Categoria:** \`${categoriaFinal}\`\n` +
+                    `• 💰 **Preço de Venda:** \`R$ ${precoStr}\`\n` +
+                    `• 🔢 **Quantidade:** \`${quantidade} unidade(s)\`\n` +
+                    (descricao ? `• 📝 **Descrição:** ${descricao}\n` : '') +
+                    '──────────────────────────────────────────\n' +
+                    '💡 *Clique em **Confirmar e Adicionar** para incluir este item no estoque ou **Cancelar** para abortar.*'
+                )
+                .setFooter({ text: 'Kensai Store • Sistema Oficial de Arsenal Blade Ball' })
+                .setTimestamp();
+
+            if (imagemFinal) {
+                embed.setImage(imagemFinal);
+            }
+
+            const rowBotoes = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId(`item_confirm_${tempId}`)
+                    .setLabel('Confirmar e Adicionar')
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji('✅'),
+                new ButtonBuilder()
+                    .setCustomId(`item_cancel_${tempId}`)
+                    .setLabel('Cancelar')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('❌')
+            );
+
+            return interaction.reply({
+                embeds: [embed],
+                components: [rowBotoes],
+                flags: [MessageFlags.Ephemeral]
+            });
         }
 
         // 2. ESTOQUE
@@ -255,8 +320,8 @@ module.exports = {
                 });
 
                 embed.addFields({
-                    name: `${c === 'Espada' ? '🗡️ Espadas' : c === 'Emote' ? '🎭 Emotes' : c === 'Limitados' ? '⏳ Limitados' : '💥 Explosões'} (${itensCat.length})`,
-                    value: linhas.slice(0, 15).join('\n') + (linhas.length > 15 ? `\n*... e mais ${linhas.length - 15} itens.*` : ''),
+                    name: `${c === 'Espada' ? '⚔️ Espadas' : c === 'Emote' ? '🎭 Emotes' : c === 'Limitados' ? '⏳ Limitados' : '💥 Explosões'} (${itensCat.length})`,
+                    value: linhas.slice(0, 15).join('\n') + (linhas.length > 15 ? `\n*... e mais ${linhas.length - 15} itens.*`: ''),
                     inline: false
                 });
             }
@@ -270,6 +335,78 @@ module.exports = {
             const payload = gerarPainelItensPayload(interaction.guild);
             await interaction.channel.send(payload);
             return interaction.editReply({ content: '✅ Painel de itens enviado com sucesso neste canal!' });
+        }
+    },
+
+    /**
+     * Handler dos botões de confirmação e cancelamento de cadastro de item
+     */
+    async handleButton(interaction) {
+        if (!checkPermission(interaction.member, PermissionFlagsBits.ManageGuild)) {
+            return interaction.reply({ content: NO_PERMISSION_MSG, flags: [MessageFlags.Ephemeral] });
+        }
+
+        const cid = interaction.customId;
+
+        // A. CONFIRMAR CADASTRO
+        if (cid.startsWith('item_confirm_')) {
+            const tempId = cid.replace('item_confirm_', '');
+            const pendencia = obterPendenciaCadastro(tempId);
+
+            if (!pendencia) {
+                return interaction.update({
+                    content: '⚠️ Esta solicitação de cadastro expirou ou já foi processada.',
+                    embeds: [],
+                    components: []
+                });
+            }
+
+            // Efetiva no estoque
+            const res = adicionarItemEstoque(pendencia);
+            removerPendenciaCadastro(tempId);
+
+            const item = res.item;
+            const precoStr = Number(item.preco).toFixed(2).replace('.', ',');
+
+            const embedSucesso = new EmbedBuilder()
+                .setColor(0x22c55e)
+                .setAuthor({ 
+                    name: '⛩️ KENSAI STORE • ITEM ADICIONADO AO ESTOQUE',
+                    iconURL: interaction.guild?.iconURL({ dynamic: true }) || undefined
+                })
+                .setTitle(`✅ ${item.nome} (${res.atualizado ? 'Estoque Abastecido' : 'Novo Produto'})`)
+                .setDescription(
+                    `O item **${item.nome}** foi salvo com sucesso no banco de dados e já está disponível para os clientes no catálogo oficial!\n\n` +
+                    `• 🏷️ **Nome Oficial:** \`${item.nome}\`\n` +
+                    `• 📦 **Categoria:** \`${item.categoria}\`\n` +
+                    `• 💰 **Preço:** \`R$ ${precoStr}\`\n` +
+                    `• 🔢 **Estoque Total:** \`${item.quantidade} unidade(s)\`\n` +
+                    `• 🆔 **Código ID:** \`${item.id}\`` +
+                    (item.descricao ? `\n• 📝 **Descrição:** ${item.descricao}` : '')
+                )
+                .setFooter({ text: 'Kensai Store • Estoque Atualizado com Sucesso' })
+                .setTimestamp();
+
+            if (item.imagem) {
+                embedSucesso.setImage(item.imagem);
+            }
+
+            return interaction.update({
+                embeds: [embedSucesso],
+                components: []
+            });
+        }
+
+        // B. CANCELAR CADASTRO
+        if (cid.startsWith('item_cancel_')) {
+            const tempId = cid.replace('item_cancel_', '');
+            removerPendenciaCadastro(tempId);
+
+            return interaction.update({
+                content: '❌ **Cadastro cancelado.** Nenhum item ou quantidade foi adicionado ao estoque.',
+                embeds: [],
+                components: []
+            });
         }
     }
 };

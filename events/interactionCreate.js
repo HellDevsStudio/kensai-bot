@@ -97,6 +97,14 @@ module.exports = {
             const cid = interaction.customId;
 
             // Interações de Itens Blade Ball
+            // Botões de Confirmação de Cadastro de Itens (Preview Semântica)
+            if (cid.startsWith('item_confirm_') || cid.startsWith('item_cancel_')) {
+                const slashItem = client.slashCommands.get('item');
+                if (slashItem && slashItem.handleButton) {
+                    return slashItem.handleButton(interaction);
+                }
+            }
+
             if (cid === 'btn_cancelar_compra' || cid.startsWith('btn_personalizado_') || cid.startsWith('btn_comprar_') || cid === 'btn_item_assumir') {
                 const { handleItemInteraction } = require('../utils/itemControl');
                 return handleItemInteraction(interaction);
