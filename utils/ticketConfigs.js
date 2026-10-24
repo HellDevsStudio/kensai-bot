@@ -28,9 +28,7 @@ function readConfigFile(name, defaults) {
 function writeConfigFile(name, data) {
     const filePath = getConfigPath(name);
     try {
-        const tmp = filePath + '.tmp';
-        fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-        fs.renameSync(tmp, filePath);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
         return true;
     } catch (e) {
         console.error('[Config] Erro ao gravar ' + name + '.json:', e.message);
@@ -60,7 +58,7 @@ function setSuporteConfig(updates) {
 
 // 2. TOKENS CONFIG
 const DEFAULT_TOKENS = {
-    preco_por_1k: 18.50,
+    preco_por_1k: 18.00,
     categoria_id: null,
     canal_logs_id: null,
     cargo_staff_id: null,

@@ -48,7 +48,7 @@ function gerarPainelPrincipal(statusNotice) {
             },
             {
                 name: '💰 2. Compra de Tokens (`tokens.json`)',
-                value: '• **Preço por 1.000:** `R$ ' + Number(tok.preco_por_1k || 18.5).toFixed(2).replace('.', ',') + '`\n' +
+                value: '• **Preço por 1.000:** `R$ ' + Number(tok.preco_por_1k !== undefined ? tok.preco_por_1k : 18).toFixed(2).replace('.', ',') + '`\n' +
                        '• **Chave Pix:** `' + (tok.chave_pix || '❌ Não configurada') + '`\n' +
                        '• **Categoria:** ' + (tok.categoria_id ? '<#' + tok.categoria_id + '>' : '❌ *Não configurada*') + '\n' +
                        '• **Canal de Logs:** ' + (tok.canal_logs_id ? '<#' + tok.canal_logs_id + '>' : '❌ *Não configurado*') + '\n' +
@@ -328,21 +328,23 @@ function gerarModalConfigTokens() {
         .setCustomId('modal_cfg_tokens')
         .setTitle('Configurar Preço & Chave Pix');
 
+    const currentPreco = tok.preco_por_1k !== undefined ? tok.preco_por_1k : 18;
     const inputPreco = new TextInputBuilder()
         .setCustomId('cfg_input_preco_1k')
         .setLabel('Preço por 1.000 tokens (R$):')
-        .setValue(String(tok.preco_por_1k || 18.5))
-        .setPlaceholder('Ex: 18.50')
+        .setValue(String(currentPreco))
+        .setPlaceholder('Ex: 18.00 ou 18')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
+    const currentPix = tok.chave_pix || 'kensai.store.oficial@gmail.com';
     const inputPix = new TextInputBuilder()
         .setCustomId('cfg_input_chave_pix')
         .setLabel('Chave Pix da loja:')
-        .setValue(String(tok.chave_pix || ''))
-        .setPlaceholder('Ex: pix@kensaistore.com ou CPF/Celular')
+        .setValue(String(currentPix))
+        .setPlaceholder('Ex: kensai.store.oficial@gmail.com')
         .setStyle(TextInputStyle.Short)
-        .setRequired(true);
+        .setRequired(false);
 
     modal.addComponents(
         new ActionRowBuilder().addComponents(inputPreco),
@@ -498,18 +500,61 @@ async function handleConfigInteraction(interaction) {
     // G. MODAL SUBMIT (TOKENS)
     if (cid === 'modal_cfg_tokens') {
         const rawPreco = interaction.fields.getTextInputValue('cfg_input_preco_1k');
-        const rawPix = interaction.fields.getTextInputValue('cfg_input_chave_pix');
-        const precoLimpo = parseFloat(rawPreco.replace(/[^0-9,\.]/g, '').replace(',', '.'));
+        let rawPix = '';
+        try {
+            rawPix = interaction.fields.getTextInputValue('cfg_input_chave_pix');
+        } catch (e) {}
+
+        let precoLimpo = NaN;
+        if (rawPreco) {
+            const limpo = rawPreco.replace(/[^\d,\.]/g, '').trim();
+            if (limpo.includes(',') && limpo.includes('.')) {
+                if (limpo.indexOf('.') < limpo.indexOf(',')) {
+                    precoLimpo = parseFloat(limpo.replace(/\./g, '').replace(',', '.'));
+                } else {
+                    precoLimpo = parseFloat(limpo.replace(/,/g, ''));
+                }
+            } else if (limpo.includes(',')) {
+                precoLimpo = parseFloat(limpo.replace(',', '.'));
+            } else {
+                precoLimpo = parseFloat(limpo);
+            }
+        }
 
         const updates = {};
-        if (!isNaN(precoLimpo) && precoLimpo > 0) updates.preco_por_1k = precoLimpo;
-        if (rawPix && rawPix.trim().length > 0) updates.chave_pix = rawPix.trim();
+        if (!isNaN(precoLimpo) && precoLimpo > 0) {
+            updates.preco_por_1k = precoLimpo;
+        }
+        if (rawPix && rawPix.trim().length > 0) {
+            updates.chave_pix = rawPix.trim();
+        } else if (!updates.chave_pix) {
+            updates.chave_pix = 'kensai.store.oficial@gmail.com';
+        }
 
         const updated = setTokensConfig(updates);
+
+        // Se o painel público de tokens já foi despachado no Discord, atualiza a mensagem em tempo real
+        if (updated.canal_painel_id && updated.mensagem_painel_id && interaction.guild) {
+            try {
+                const painelChan = interaction.guild.channels.cache.get(updated.canal_painel_id) || await interaction.guild.channels.fetch(updated.canal_painel_id).catch(() => null);
+                if (painelChan && painelChan.isTextBased()) {
+                    const painelMsg = await painelChan.messages.fetch(updated.mensagem_painel_id).catch(() => null);
+                    if (painelMsg) {
+                        const payload = gerarPainelTokensPayload();
+                        await painelMsg.edit(payload).catch(() => {});
+                    }
+                }
+            } catch (err) {
+                console.error('[Config] Erro ao sincronizar mensagem do painel de tokens:', err.message);
+            }
+        }
+
+        const precoFinalStr = Number(updated.preco_por_1k !== undefined ? updated.preco_por_1k : 18).toFixed(2).replace('.', ',');
         return interaction.reply({
-            content: '✅ **Preço por 1.000 Tokens e Chave Pix atualizados com sucesso!**\n\n' +
-                '• **Preço por 1k:** `R$ ' + Number(updated.preco_por_1k || 18.5).toFixed(2).replace('.', ',') + '`\n' +
-                '• **Chave Pix:** `' + (updated.chave_pix || 'Não configurada') + '`',
+            content: '✅ **Cotação de Tokens e Chave Pix gravadas com sucesso!**\n\n' +
+                '• **Cotação por 1.000 Tokens:** `R$ ' + precoFinalStr + '`\n' +
+                '• **Chave Pix Oficial:** `' + (updated.chave_pix || 'kensai.store.oficial@gmail.com') + '`\n\n' +
+                '✨ *A cotação foi salva no sistema. Qualquer novo ticket ou painel aberto já utilizará `R$ ' + precoFinalStr + '`!*',
             flags: [MessageFlags.Ephemeral]
         });
     }

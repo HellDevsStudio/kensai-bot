@@ -55,7 +55,7 @@ function gerarPainelSuportePayload() {
  */
 function gerarPainelTokensPayload() {
     const config = getTokensConfig();
-    const unitPrice = Number(config.preco_por_1k || 18.50);
+    const unitPrice = Number(config.preco_por_1k !== undefined ? config.preco_por_1k : 18.00);
     const preco1kStr = unitPrice.toFixed(2).replace('.', ',');
 
     function calcPrice(qtd) {

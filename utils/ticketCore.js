@@ -158,11 +158,11 @@ async function abrirTicket(interaction, tipo, detalhes) {
     if (tipo === 'tokens') {
         titulo = TOKEN_EMOJI_STR + ' Pedido de Tokens • Kensai Store';
         const qtdTokens = Number(detalhes?.quantidade || 1000);
-        const precoUnitario = Number(sysConfig.preco_por_1k || 18.50);
+        const precoUnitario = Number(sysConfig.preco_por_1k !== undefined ? sysConfig.preco_por_1k : 18.00);
         const valorCalculado = (qtdTokens / 1000) * precoUnitario;
         const valorFormatado = 'R$ ' + valorCalculado.toFixed(2).replace('.', ',');
         const preco1kFormatado = 'R$ ' + precoUnitario.toFixed(2).replace('.', ',');
-        const chavePix = sysConfig.chave_pix || 'Chave Pix a consultar com a staff';
+        const chavePix = sysConfig.chave_pix || 'kensai.store.oficial@gmail.com';
 
         desc = '> Olá ' + user.toString() + ', seu pedido de **Tokens** foi iniciado com sucesso!\n\n' +
             '📌 **COMO FINALIZAR SUA COMPRA:**\n' +
@@ -356,7 +356,7 @@ async function aprovarCompraToken(interaction, protocolo) {
     writeData('tickets_ativos', ativos);
 
     const qtdNum = Number(ticket.detalhes?.quantidade || 1000);
-    const precoUnitario = Number(sysConfig.preco_por_1k || 18.50);
+    const precoUnitario = Number(sysConfig.preco_por_1k !== undefined ? sysConfig.preco_por_1k : 18.00);
     const valorTotal = (qtdNum / 1000) * precoUnitario;
     const valorStr = 'R$ ' + valorTotal.toFixed(2).replace('.', ',');
 
@@ -565,7 +565,7 @@ async function fecharTicket(interaction, protocolo) {
 
             if (ticket?.tipo === 'tokens' && ticket?.detalhes) {
                 const qtdNum = Number(ticket.detalhes.quantidade || 1000);
-                const preco1k = Number(sysConfig.preco_por_1k || 18.50);
+                const preco1k = Number(sysConfig.preco_por_1k !== undefined ? sysConfig.preco_por_1k : 18.00);
                 const valorTot = (qtdNum / 1000) * preco1k;
                 logEmbed.addFields({
                     name: TOKEN_EMOJI_STR + ' Detalhes da Venda',

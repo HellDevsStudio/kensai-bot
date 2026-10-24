@@ -8,6 +8,11 @@ const {
     getItensConfig, setItensConfig
 } = require('../utils/ticketConfigs');
 
+// Salva backups das configurações reais para não sobrescrever em produção
+const origSuporte = Object.assign({}, getSuporteConfig());
+const origTokens = Object.assign({}, getTokensConfig());
+const origItens = Object.assign({}, getItensConfig());
+
 const { 
     gerarPainelSuportePayload, 
     gerarPainelTokensPayload, 
@@ -160,9 +165,10 @@ runTest('10. Subtelas interativas de Suporte, Tokens e Itens contêm Selects de 
     assert.strictEqual(modal.data.custom_id, 'modal_cfg_tokens');
 });
 
-// Cleanup
-setSuporteConfig({ categoria_id: null });
-setTokensConfig({ preco_por_1k: 18.5, chave_pix: null });
+// Cleanup: restaura fielmente o estado original pré-teste
+setSuporteConfig(origSuporte);
+setTokensConfig(origTokens);
+setItensConfig(origItens);
 
 console.log(`\n=======================================================`);
 console.log(`   RESULTADO DOS TESTES DE TICKET: ${passed}/${total} PASSADOS`);

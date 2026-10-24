@@ -69,7 +69,7 @@ module.exports = {
                     return interaction.reply({ content: '❌ Quantidade inválida selecionada.', flags: [MessageFlags.Ephemeral] });
                 }
                 const tokCfg = getTokensConfig();
-                const preco1k = tokCfg.preco_por_1k || 18.5;
+                const preco1k = Number(tokCfg.preco_por_1k !== undefined ? tokCfg.preco_por_1k : 18.0);
                 const valor = (qtd / 1000) * preco1k;
                 return abrirTicket(interaction, 'tokens', { quantidade: qtd, valor });
             }
@@ -370,7 +370,7 @@ module.exports = {
                         });
                     }
                     const tokCfg = getTokensConfig();
-                    const preco1k = tokCfg.preco_por_1k || 18.5;
+                    const preco1k = Number(tokCfg.preco_por_1k !== undefined ? tokCfg.preco_por_1k : 18.0);
                     const valor = (qtd / 1000) * preco1k;
                     return await abrirTicket(interaction, 'tokens', { quantidade: qtd, valor });
                 }
