@@ -1,105 +1,80 @@
 const { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { criarEmbedPadrao } = require('../../utils/embeds');
 
-const CATEGORIAS = {
+const CATEGORIAS_CLIENTE = {
     util: {
-        nome: '🛠️ Utilitários e Informações',
-        descricao: 'Comandos gerais de consulta, ping, perfil e canais.',
+        nome: '🛠️ Utilitários & Informações',
+        descricao: 'Comandos gerais de consulta, perfil, informações e ferramentas.',
         comandos: [
-            '`/ping` - Mede latência e uptime',
-            '`/help` - Menu de ajuda',
-            '`/serverinfo` - Dados da Kensai Store',
-            '`/userinfo` - Ficha do membro',
-            '`/avatar` - Imagem de perfil',
-            '`/banner` - Capa de perfil',
-            '`/servericon` - Logo do servidor',
-            '`/roleinfo` - Detalhes do cargo',
-            '`/channelinfo` - Dados do canal',
-            '`/botinfo` - Ficha técnica do Ken',
-            '`/afk` - Ativa modo ausente',
-            '`/lembrete` - Despertador/lembrete',
-            '`/calc` - Calculadora matemática',
-            '`/traduzir` - Tradutor de idiomas',
-            '`/sugerir` - Envia sugestão com votação'
+            '`/ping` - Mede a latência e o tempo de atividade do bot',
+            '`/help` - Abre esta central de ajuda para clientes',
+            '`/serverinfo` - Exibe informações e dados da Kensai Store',
+            '`/userinfo` - Mostra a ficha completa e cargos de um membro',
+            '`/avatar` - Exibe a foto de perfil em alta definição',
+            '`/banner` - Exibe o banner de perfil do usuário',
+            '`/servericon` - Mostra o logo oficial do servidor',
+            '`/roleinfo` - Detalhes e permissões de um cargo',
+            '`/channelinfo` - Dados do canal de texto ou voz',
+            '`/botinfo` - Ficha técnica e estatísticas do Ken Bot',
+            '`/afk` - Ativa ou remove seu status de ausente',
+            '`/lembrete` - Define um despertador ou lembrete pessoal',
+            '`/calc` - Calculadora matemática rápida',
+            '`/traduzir` - Tradutor automático de textos e termos',
+            '`/sugerir` - Envia uma sugestão com sistema de votação'
         ]
     },
     loja: {
         nome: '🛒 Loja & Comunidade',
-        descricao: 'Ferramentas comerciais para clientes da Kensai Store.',
+        descricao: 'Ferramentas comerciais e de atendimento para clientes da Kensai Store.',
         comandos: [
-            '`/robloxinfo` - Consulta conta do Roblox',
-            '`/taxarobux` - Calcula os 30% da Gamepass',
-            '`/avaliar` - Avalia o atendimento com estrelas',
-            '`/reputacao` - Consulta reputação de vendedor',
-            '`/vouch` - Confirmação rápida de entrega'
+            '`/robloxinfo` - Consulta dados e perfil de contas no Roblox',
+            '`/taxarobux` - Calcula o valor da Gamepass considerando os 30% do Roblox',
+            '`/avaliar` - Abre o painel para avaliar o atendimento recebido',
+            '`/reputacao` - Consulta as avaliações e nota de um vendedor da Staff',
+            '`/vouch` - Envia uma confirmação rápida de entrega bem-sucedida'
         ]
     },
     fun: {
         nome: '🎉 Diversão & Mini-games',
-        descricao: 'Jogos, interações e zoeiras para engajar o chat.',
+        descricao: 'Jogos, interações e brincadeiras para interagir no chat.',
         comandos: [
-            '`/8ball` - Bola 8 mística',
-            '`/coinflip` - Gira moeda',
-            '`/roll` - Rola dados',
-            '`/ppt` - Pedra, papel e tesoura',
-            '`/jogodavelha` - Jogo da velha 3x3',
-            '`/duelo` - Duelo de lâminas de reflexo',
-            '`/ship` - Medidor de química',
-            '`/hackear` - Terminal hacker fake',
-            '`/rate` - Nota de 0 a 100',
-            '`/escolha` - Sorteia entre opções',
-            '`/ascii` - Banner em arte ASCII',
-            '`/inverter` - Inverte texto'
+            '`/8ball` - Pergunta para a bola 8 mística',
+            '`/coinflip` - Gira uma moeda (Cara ou Coroa animado)',
+            '`/roll` - Rola dados com faces customizadas',
+            '`/ppt` - Joga Pedra, Papel e Tesoura contra o bot',
+            '`/jogodavelha` - Desafia outro membro no Jogo da Velha 3x3',
+            '`/duelo` - Duelo emocionante de lâminas e reflexos',
+            '`/ship` - Calcula a compatibilidade entre dois membros',
+            '`/hackear` - Simula uma invasão hacker divertida',
+            '`/rate` - Dá uma nota bem-humorada de 0 a 100',
+            '`/escolha` - Sorteia uma opção entre várias fornecidas',
+            '`/ascii` - Converte seu texto em arte ASCII estilizada',
+            '`/inverter` - Inverte as letras de uma frase'
         ]
     },
     rp: {
         nome: '🎭 Roleplay & Social',
-        descricao: 'Comandos de interação social entre amigos.',
+        descricao: 'Ações de interação social e carinho entre amigos.',
         comandos: [
-            '`/abracar` (ou `/hug`) - Dá um abraço quentinho',
-            '`/beijar` (ou `/kiss`) - Dá um beijo carinhoso',
-            '`/tapa` (ou `/slap`) - Dá um tapa/bofetada',
-            '`/cafune` / `/carinho` (ou `/pat`) - Faz cafuné na cabeça',
-            '`/tocaaqui` (ou `/highfive`) - Toca aqui / High Five'
-        ]
-    },
-    staff: {
-        nome: '🛡️ Moderação & Staff',
-        descricao: 'Comandos restritos para equipe e administração.',
-        comandos: [
-            '`/clear` - Limpa mensagens',
-            '`/ban` / `/unban` - Gerencia banimentos',
-            '`/kick` - Expulsa membro',
-            '`/timeout` / `/untimeout` - Castigo nativo',
-            '`/warn` / `/warnings` / `/unwarn` - Ficha criminal',
-            '`/snipe` - Revela mensagem apagada',
-            '`/lock` / `/unlock` - Tranca chat',
-            '`/slowmode` - Modo lento',
-            '`/nuke` - Reinicia canal do zero',
-            '`/role` - Adiciona/remove cargo',
-            '`/setnick` - Altera apelido',
-            '`/say` - Fala pelo bot',
-            '`/embed` - Formulário de anúncio',
-            '`/dm` - Notificação direta da loja',
-            '`/addemoji` - Adiciona emoji',
-            '`/addsticker` - Cria figurinha (sticker)',
-            '`/sorteio` - Sistema de sorteios',
-            '`/config` - Central de configuração dos 3 sistemas (Suporte, Tokens, Itens)'
+            '`/abracar` (ou `/hug`) - Dá um abraço quentinho com GIF',
+            '`/beijar` (ou `/kiss`) - Dá um beijo afetuoso com GIF',
+            '`/tapa` (ou `/slap`) - Dá uma bofetada cômica com GIF',
+            '`/cafune` (ou `/pat`) - Faz cafuné na cabeça com GIF',
+            '`/tocaaqui` (ou `/highfive`) - Manda um toca aqui / High Five com GIF'
         ]
     }
 };
 
-function getHelpMenu() {
+function getHelpClienteMenu() {
     return new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
             .setCustomId('help_category_select')
-            .setPlaceholder('Selecione uma categoria...')
+            .setPlaceholder('Escolha uma categoria de comandos...')
             .addOptions([
-                { label: 'Utilitários', value: 'util', description: 'Comandos de informações, ping e perfil', emoji: '🛠️' },
-                { label: 'Loja & Clientes', value: 'loja', description: 'Roblox, taxa de robux e avaliações', emoji: '🛒' },
+                { label: 'Utilitários & Info', value: 'util', description: 'Informações, ping, perfil e canais', emoji: '🛠️' },
+                { label: 'Loja & Clientes', value: 'loja', description: 'Roblox, taxa e reputação', emoji: '🛒' },
                 { label: 'Diversão & Jogos', value: 'fun', description: 'Mini-games e brincadeiras no chat', emoji: '🎉' },
-                { label: 'Roleplay', value: 'rp', description: 'Interações sociais entre membros', emoji: '🎭' },
-                { label: 'Staff & Moderação', value: 'staff', description: 'Comandos restritos para moderação', emoji: '🛡️' }
+                { label: 'Roleplay & Social', value: 'rp', description: 'Interações sociais entre membros', emoji: '🎭' }
             ])
     );
 }
@@ -107,22 +82,35 @@ function getHelpMenu() {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('help')
-        .setDescription('Central de ajuda com todos os comandos da Kensai Store.'),
+        .setDescription('Central de ajuda com os comandos para clientes e comunidade da Kensai Store.'),
+    
     async execute(interaction) {
         const embed = criarEmbedPadrao(
-            '🗡️ Kensai Store — Central de Comandos',
-            'Bem-vindo à central de ajuda do **Ken**!\n\n' +
-            'Utilize o **Menu Dropdown** abaixo para navegar entre as categorias disponíveis.\n' +
-            'Você também pode usar o prefixo padrão `k!` para os comandos.'
+            '⛩️ Kensai Store — Central de Comandos',
+            'Bem-vindo à central de comandos do **Ken Bot**!\n\n' +
+            'Utilize o **Menu Dropdown** abaixo para explorar os comandos disponíveis para clientes e membros.\n\n' +
+            '• **Prefixo para chat:** `k!` (Ex: `k!ping`, `k!calc`)\n' +
+            '• **Membros da Staff:** Utilize `/helpstaff` para os comandos administrativos.'
         );
 
-        await interaction.reply({ embeds: [embed], components: [getHelpMenu()] });
+        return interaction.reply({
+            embeds: [embed],
+            components: [getHelpClienteMenu()]
+        });
     },
+
     async handleSelect(interaction, category) {
-        const cat = CATEGORIAS[category];
+        const cat = CATEGORIAS_CLIENTE[category];
         if (!cat) return;
 
-        const embed = criarEmbedPadrao(cat.nome, `${cat.descricao}\n\n${cat.comandos.join('\n')}`);
-        await interaction.update({ embeds: [embed], components: [getHelpMenu()] });
+        const embed = criarEmbedPadrao(
+            cat.nome,
+            cat.descricao + '\n\n' + cat.comandos.join('\n')
+        ).setFooter({ text: 'Kensai Store • Use k! antes dos comandos no chat' });
+
+        return interaction.update({
+            embeds: [embed],
+            components: [getHelpClienteMenu()]
+        });
     }
 };

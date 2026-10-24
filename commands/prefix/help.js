@@ -1,30 +1,31 @@
-const slashHelp = require('../slash/help');
+const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { criarEmbedPadrao } = require('../../utils/embeds');
 
 module.exports = {
     name: 'help',
-    description: 'Central de ajuda do bot.',
+    description: 'Central de ajuda para membros e clientes da Kensai Store.',
+    aliases: ['ajuda', 'comandos', 'menu'],
     async execute(message, args, client) {
-        const { criarEmbedPadrao } = require('../../utils/embeds');
         const embed = criarEmbedPadrao(
-            '🗡️ Kensai Store — Central de Comandos',
-            'Bem-vindo à central de ajuda do **Ken**!\n\n' +
-            'Utilize o **Menu Dropdown** abaixo para navegar entre as categorias disponíveis.\n' +
-            'Você também pode usar `/help` para a versão Slash Command.'
+            '⛩️ Kensai Store — Central de Comandos',
+            'Bem-vindo à central de comandos do **Ken Bot**!\n\n' +
+            'Utilize o **Menu Dropdown** abaixo para navegar pelos comandos de membros e clientes.\n\n' +
+            '• **Prefixo no chat:** `k!` (Ex: `k!ping`, `k!calc`, `k!avaliar`)\n' +
+            '• **Membros da Staff:** Utilize `k!helpstaff` ou `/helpstaff` para os comandos de administração.'
         );
-        const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+
         const menu = new ActionRowBuilder().addComponents(
             new StringSelectMenuBuilder()
                 .setCustomId('help_category_select')
-                .setPlaceholder('Selecione uma categoria...')
+                .setPlaceholder('Escolha uma categoria de comandos...')
                 .addOptions([
-                    { label: 'Utilitários', value: 'util', description: 'Comandos de informações e ping', emoji: '🛠️' },
-                    { label: 'Loja & Clientes', value: 'loja', description: 'Roblox, taxa de robux e avaliações', emoji: '🛒' },
-                    { label: 'Diversão & Jogos', value: 'fun', description: 'Mini-games e brincadeiras', emoji: '🎉' },
-                    { label: 'Roleplay', value: 'rp', description: 'Interações sociais', emoji: '🎭' },
-                    { label: 'Staff & Moderação', value: 'staff', description: 'Comandos restritos', emoji: '🛡️' }
+                    { label: 'Utilitários & Info', value: 'util', description: 'Informações, ping, perfil e canais', emoji: '🛠️' },
+                    { label: 'Loja & Clientes', value: 'loja', description: 'Roblox, taxa e reputação', emoji: '🛒' },
+                    { label: 'Diversão & Jogos', value: 'fun', description: 'Mini-games e brincadeiras no chat', emoji: '🎉' },
+                    { label: 'Roleplay & Social', value: 'rp', description: 'Interações sociais entre membros', emoji: '🎭' }
                 ])
         );
 
-        await message.reply({ embeds: [embed], components: [menu] });
+        return message.reply({ embeds: [embed], components: [menu] });
     }
 };

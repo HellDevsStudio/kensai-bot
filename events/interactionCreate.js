@@ -82,6 +82,14 @@ module.exports = {
                 return abrirTicket(interaction, 'itens', item);
             }
 
+            if (interaction.customId === 'helpstaff_category_select') {
+                const category = interaction.values[0];
+                const helpstaffCommand = client.slashCommands.get('helpstaff');
+                if (helpstaffCommand && helpstaffCommand.handleSelect) {
+                    return helpstaffCommand.handleSelect(interaction, category);
+                }
+            }
+
             if (interaction.customId === 'help_category_select') {
                 const category = interaction.values[0];
                 const helpCommand = client.slashCommands.get('help');
