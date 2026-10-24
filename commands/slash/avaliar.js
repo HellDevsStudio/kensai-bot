@@ -1,55 +1,43 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { criarEmbedPadrao, criarEmbedErro } = require('../../utils/embeds');
-const { readData, writeData } = require('../../utils/db');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { 
+    identificarPartesTicket, 
+    gerarPainelAvaliacaoPayload 
+} = require('../../utils/avaliarCore');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('avaliar')
-        .setDescription('Deixe sua avaliação e nota para um membro da Staff.')
-        .addUserOption(opt => opt.setName('staff').setDescription('Vendedor ou staff responsável').setRequired(true))
-        .addIntegerOption(opt => opt.setName('nota').setDescription('Nota de 1 a 5 estrelas').setRequired(true).setMinValue(1).setMaxValue(5))
-        .addStringOption(opt => opt.setName('comentario').setDescription('Seu feedback sobre o atendimento').setRequired(true)),
+        .setDescription('Solicita avaliação do atendimento ao cliente no ticket.')
+        .setDefaultMemberPermissions(PermissionFlagsBits.SendMessages)
+        .addUserOption(opt => 
+            opt.setName('staff')
+                .setDescription('Atendente / Vendedor (opcional - detectado sozinho no ticket)')
+                .setRequired(false)
+        )
+        .addUserOption(opt => 
+            opt.setName('cliente')
+                .setDescription('Cliente (opcional - detectado sozinho no ticket)')
+                .setRequired(false)
+        ),
+
     async execute(interaction) {
-        const staff = interaction.options.getUser('staff');
-        const nota = interaction.options.getInteger('nota');
-        const comentario = interaction.options.getString('comentario');
+        let staffUser = interaction.options.getUser('staff');
+        let clienteUser = interaction.options.getUser('cliente');
 
-        if (staff.id === interaction.user.id) {
-            return interaction.reply({
-                embeds: [criarEmbedErro('Avaliação Inválida', 'Você não pode avaliar a si mesmo!')],
-                ephemeral: true
-            });
-        }
+        const partes = identificarPartesTicket(interaction.channelId, interaction.channel, interaction.user);
 
-        const estrelas = '⭐'.repeat(nota) + '☆'.repeat(5 - nota);
+        const staffId = staffUser?.id || partes.staffId || interaction.user.id;
+        const clienteId = clienteUser?.id || partes.clienteId;
 
-        // Gravar no banco de reputação
-        const repData = readData('reputacao', {});
-        repData[staff.id] = repData[staff.id] || { points: 0, reviews: [] };
-        repData[staff.id].points += nota;
-        repData[staff.id].reviews.push({
-            authorId: interaction.user.id,
-            authorTag: interaction.user.tag,
-            nota: nota,
-            comentario: comentario,
-            date: Date.now()
+        const painel = gerarPainelAvaliacaoPayload({
+            staffId,
+            clienteId,
+            guild: interaction.guild
         });
-        writeData('reputacao', repData);
 
-        const embed = criarEmbedPadrao('🌟 Nova Avaliação de Atendimento!')
-            .setThumbnail(interaction.user.displayAvatarURL())
-            .addFields(
-                { name: '👤 Cliente', value: `<@${interaction.user.id}>`, inline: true },
-                { name: '🛡️ Atendente / Vendedor', value: `<@${staff.id}>`, inline: true },
-                { name: '⭐ Nota', value: `**${estrelas}** (${nota}/5)`, inline: true },
-                { name: '💬 Depoimento', value: `> ${comentario}` }
-            )
-            .setFooter({ text: 'Kensai Store — Transparência e Confiança' });
-
-        const canalAvaliacoes = interaction.guild.channels.cache.find(c => c.name.includes('avalia') || c.name.includes('feedbacks'));
-        const canalAlvo = canalAvaliacoes || interaction.channel;
-
-        await canalAlvo.send({ embeds: [embed] });
-        await interaction.reply({ content: '✅ Sua avaliação foi enviada com sucesso! Obrigado pelo feedback.', ephemeral: true });
+        return interaction.reply({
+            embeds: painel.embeds,
+            components: painel.components
+        });
     }
 };

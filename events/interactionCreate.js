@@ -99,6 +99,12 @@ module.exports = {
             // Interações de Itens Blade Ball
             // Botões de Confirmação de Cadastro de Itens (Preview Semântica)
             // Botões de Pix (Copiar Código e Copiar Chave)
+                        // Botão de Avaliação (Avalie Aqui)
+            if (cid.startsWith('btn_avaliar_')) {
+                const { handleAvaliarButton } = require('../utils/avaliarCore');
+                return handleAvaliarButton(interaction);
+            }
+
             if (cid.startsWith('btn_copiar_pix_') || cid.startsWith('btn_chave_pix_') || cid.startsWith('btn_confirmar_pix_')) {
                 const { handlePixButton } = require('../utils/pix');
                 return handlePixButton(interaction);
@@ -335,6 +341,12 @@ module.exports = {
                     return await handleCopyModal(interaction);
                 }
                 // Modal de Configuração de Tokens (Preço & Pix)
+                // Modal de Avaliação do Cliente
+                if (interaction.customId.startsWith('modal_avaliar_')) {
+                    const { handleAvaliarModal } = require('../utils/avaliarCore');
+                    return await handleAvaliarModal(interaction);
+                }
+
                 if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_')) {
                     return await handleConfigInteraction(interaction);
                 }

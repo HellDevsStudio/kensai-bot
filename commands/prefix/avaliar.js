@@ -1,49 +1,38 @@
-const { criarEmbedPadrao, criarEmbedErro } = require('../../utils/embeds');
-const { readData, writeData } = require('../../utils/db');
+const { 
+    identificarPartesTicket, 
+    gerarPainelAvaliacaoPayload 
+} = require('../../utils/avaliarCore');
 
 module.exports = {
     name: 'avaliar',
-    description: 'Avalia o atendimento de um staff.',
+    description: 'Solicita avaliação do atendimento ao cliente no ticket.',
+    aliases: ['feedback', 'review'],
     async execute(message, args) {
-        const staff = message.mentions.users.first();
-        const nota = parseInt(args[1], 10);
-        const comentario = args.slice(2).join(' ');
+        let staffId = null;
+        let clienteId = null;
 
-        if (!staff || isNaN(nota) || nota < 1 || nota > 5 || !comentario) {
-            return message.reply({ embeds: [criarEmbedErro('Uso Correto', 'Use: `k!avaliar [@staff] [nota 1-5] [comentário]`')] });
+        const mentions = message.mentions.users;
+        if (mentions.size === 1) {
+            staffId = mentions.first().id;
+        } else if (mentions.size >= 2) {
+            const arr = Array.from(mentions.values());
+            staffId = arr[0].id;
+            clienteId = arr[1].id;
         }
 
-        if (staff.id === message.author.id) {
-            return message.reply({ embeds: [criarEmbedErro('Inválido', 'Você não pode avaliar a si mesmo!')] });
-        }
+        const partes = identificarPartesTicket(message.channel.id, message.channel, message.author);
+        if (!staffId) staffId = partes.staffId || message.author.id;
+        if (!clienteId) clienteId = partes.clienteId;
 
-        const estrelas = '⭐'.repeat(nota) + '☆'.repeat(5 - nota);
-
-        const repData = readData('reputacao', {});
-        repData[staff.id] = repData[staff.id] || { points: 0, reviews: [] };
-        repData[staff.id].points += nota;
-        repData[staff.id].reviews.push({
-            authorId: message.author.id,
-            authorTag: message.author.tag,
-            nota: nota,
-            comentario: comentario,
-            date: Date.now()
+        const painel = gerarPainelAvaliacaoPayload({
+            staffId,
+            clienteId,
+            guild: message.guild
         });
-        writeData('reputacao', repData);
 
-        const embed = criarEmbedPadrao('🌟 Nova Avaliação de Atendimento!')
-            .setThumbnail(message.author.displayAvatarURL())
-            .addFields(
-                { name: '👤 Cliente', value: `<@${message.author.id}>`, inline: true },
-                { name: '🛡️ Atendente / Vendedor', value: `<@${staff.id}>`, inline: true },
-                { name: '⭐ Nota', value: `**${estrelas}** (${nota}/5)`, inline: true },
-                { name: '💬 Depoimento', value: `> ${comentario}` }
-            );
-
-        const canalAvaliacoes = message.guild.channels.cache.find(c => c.name.includes('avalia') || c.name.includes('feedbacks'));
-        const canalAlvo = canalAvaliacoes || message.channel;
-
-        await canalAlvo.send({ embeds: [embed] });
-        message.delete().catch(() => {});
+        await message.reply({
+            embeds: painel.embeds,
+            components: painel.components
+        });
     }
 };
