@@ -31,12 +31,16 @@ const {
     gerarPainelSpinsConfig,
     gerarPainelSpinsRemover,
     gerarPainelSpinsPreco,
+    gerarPainelSpinsOrdem,
     gerarModalConfigTokens
 } = require('../utils/configDashboard');
 const {
     adicionarProdutoSpins,
     removerProdutoSpins,
-    atualizarPrecoSpins
+    atualizarPrecoSpins,
+    moverPosicaoProdutoSpins,
+    trocarPosicaoProdutoSpins,
+    reordenarProdutosSpins
 } = require('../utils/spinsManager');
 
 const ticketCore = require('../utils/ticketCore');
@@ -182,7 +186,7 @@ runTest('11. Leitura e escrita de spins_passes.json mantém catálogo e alteraç
     assert.ok(Array.isArray(spn.produtos));
     assert.ok(spn.produtos.length >= 6);
     assert.ok(spn.produtos.some(p => p.id === 'spin_50'));
-    assert.ok(spn.produtos.some(p => p.id === 'passe_vip'));
+    assert.ok(spn.produtos.some(p => p.id === 'passe_batalha'));
 
     // Testa alteração de preço individual
     const produtos = JSON.parse(JSON.stringify(spn.produtos));
@@ -249,6 +253,87 @@ runTest('16. adicionarProdutoSpins e removerProdutoSpins funcionam de forma atô
 
     const posRemocao = getSpinsPassesConfig();
     assert.ok(!posRemocao.produtos.some(p => p.id === novo.id));
+});
+
+
+runTest('17. moverPosicaoProdutoSpins reposiciona um item para posição específica', () => {
+    const config = getSpinsPassesConfig();
+    const itemTarget = config.produtos[config.produtos.length - 1];
+    assert.ok(itemTarget);
+
+    const res = moverPosicaoProdutoSpins(null, itemTarget.id, 1);
+    assert.strictEqual(res.novaPosicao, 1);
+    assert.strictEqual(res.produto.id, itemTarget.id);
+
+    const posMove = getSpinsPassesConfig();
+    assert.strictEqual(posMove.produtos[0].id, itemTarget.id);
+});
+
+runTest('18. trocarPosicaoProdutoSpins movimenta itens via up, down, top e bottom', () => {
+    const config = getSpinsPassesConfig();
+    const item = config.produtos[0];
+    
+    // Descer
+    const resDown = trocarPosicaoProdutoSpins(null, item.id, 'down');
+    assert.strictEqual(resDown.novaPosicao, 2);
+
+    // Subir
+    const resUp = trocarPosicaoProdutoSpins(null, item.id, 'up');
+    assert.strictEqual(resUp.novaPosicao, 1);
+
+    // Mover pro fim (bottom)
+    const resBottom = trocarPosicaoProdutoSpins(null, item.id, 'bottom');
+    assert.strictEqual(resBottom.novaPosicao, config.produtos.length);
+
+    // Mover pro topo (top)
+    const resTop = trocarPosicaoProdutoSpins(null, item.id, 'top');
+    assert.strictEqual(resTop.novaPosicao, 1);
+});
+
+runTest('19. reordenarProdutosSpins organiza por spins_primeiro, passes_primeiro e menor_preco', () => {
+    // 1. spins_primeiro
+    const resSpins = reordenarProdutosSpins(null, 'spins_primeiro');
+    const primeiroPasseIdx = resSpins.produtos.findIndex(p => p.tipo === 'passe');
+    const ultimoSpinIdx = resSpins.produtos.map(p => p.tipo).lastIndexOf('spin');
+    if (primeiroPasseIdx !== -1 && ultimoSpinIdx !== -1) {
+        assert.ok(ultimoSpinIdx < primeiroPasseIdx, 'Spins devem vir antes de passes');
+    }
+
+    // 2. menor_preco
+    function extrairPreco(p) {
+        if (typeof p.preco === 'number') return p.preco;
+        const n = parseFloat(String(p.preco || '').replace(/[^\d,\.]/g, '').replace(',', '.'));
+        return isNaN(n) ? 999999 : n;
+    }
+
+    const resPreco = reordenarProdutosSpins(null, 'menor_preco');
+    for (let i = 0; i < resPreco.produtos.length - 1; i++) {
+        const valA = extrairPreco(resPreco.produtos[i]);
+        const valB = extrairPreco(resPreco.produtos[i + 1]);
+        assert.ok(valA <= valB, 'Preços devem ser crescentes');
+    }
+});
+
+runTest('20. gerarPainelSpinsOrdem renderiza dropdown de seleção, setas de movimento e presets rápidos', () => {
+    const painel = gerarPainelSpinsOrdem('Status OK', 'spin_50');
+    assert.ok(painel.embeds && painel.embeds.length === 1);
+    assert.ok(painel.components.length >= 3);
+
+    // Dropdown
+    const selectRow = painel.components[0];
+    assert.strictEqual(selectRow.components[0].data.custom_id, 'cfg_sel_spins_order_pick');
+
+    // Botões de movimento
+    const btnRow = painel.components[1];
+    assert.ok(btnRow.components.some(c => c.data.custom_id.startsWith('cfg_btn_spins_move_up_')));
+    assert.ok(btnRow.components.some(c => c.data.custom_id.startsWith('cfg_btn_spins_move_down_')));
+    assert.ok(btnRow.components.some(c => c.data.custom_id.startsWith('cfg_btn_spins_move_top_')));
+    assert.ok(btnRow.components.some(c => c.data.custom_id.startsWith('cfg_btn_spins_move_bottom_')));
+
+    // Presets
+    const presetRow = painel.components[2];
+    assert.ok(presetRow.components.some(c => c.data.custom_id === 'cfg_btn_spins_sort_spins_first'));
+    assert.ok(presetRow.components.some(c => c.data.custom_id === 'cfg_btn_spins_sort_price_asc'));
 });
 
 // Cleanup: restaura fielmente o estado original pré-teste

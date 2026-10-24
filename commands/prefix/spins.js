@@ -4,7 +4,9 @@ const {
     listarProdutosSpins, 
     formatarPrecoProduto, 
     adicionarProdutoSpins, 
-    removerProdutoSpins 
+    removerProdutoSpins,
+    moverPosicaoProdutoSpins,
+    reordenarProdutosSpins
 } = require('../../utils/spinsManager');
 const { gerarPainelSpinsPassesPayload } = require('../../utils/ticketPanels');
 const { setSpinsPassesConfig } = require('../../utils/ticketConfigs');
@@ -25,6 +27,29 @@ module.exports = {
             const msg = await message.channel.send(payload);
             setSpinsPassesConfig({ canal_painel_id: message.channel.id, mensagem_painel_id: msg.id });
             return message.reply('🌀 **Painel de Spins & Passes** enviado com sucesso neste canal!');
+        }
+
+        if (sub === 'mover') {
+            const target = args[1];
+            const posRaw = args[2];
+            if (!target || !posRaw) {
+                return message.reply('💡 Uso: `k!spins mover <id_ou_nome> <posicao>` (Ex: `k!spins mover 10 1`)');
+            }
+            const prods = listarProdutosSpins();
+            const prod = prods.find(p => p.id === target || p.nome.toLowerCase().includes(target.toLowerCase()));
+            if (!prod) return message.reply('❌ Item não encontrado no catálogo de spins/passes.');
+            const res = moverPosicaoProdutoSpins(message.guild, prod.id, parseInt(posRaw, 10));
+            return message.reply('✅ **' + res.produto.nome + '** agora está na posição **#' + res.novaPosicao + '** do painel!');
+        }
+
+        if (sub === 'organizar') {
+            const modo = args[1] || 'spins_primeiro';
+            const modosValidos = ['spins_primeiro', 'passes_primeiro', 'menor_preco', 'maior_preco', 'alfabetico'];
+            if (!modosValidos.includes(modo)) {
+                return message.reply('💡 Modos válidos: `spins_primeiro`, `passes_primeiro`, `menor_preco`, `maior_preco`, `alfabetico`');
+            }
+            reordenarProdutosSpins(message.guild, modo);
+            return message.reply('✅ Catálogo de Spins e Passes reorganizado com sucesso com o modo: `' + modo + '`!');
         }
 
         if (sub === 'listar') {

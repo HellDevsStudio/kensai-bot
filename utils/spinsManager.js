@@ -122,11 +122,113 @@ async function sincronizarPainelSpinsAoVivo(guildOrClient, config) {
     }
 }
 
+
+/**
+ * Extrai valor numérico de preço para ordenação
+ */
+function obterValorNumericoPreco(preco) {
+    if (typeof preco === 'number') return preco;
+    const limpo = String(preco || '').replace(/[^\d,\.]/g, '').replace(',', '.');
+    const num = parseFloat(limpo);
+    return isNaN(num) ? 999999 : num;
+}
+
+/**
+ * Move um produto para uma posição específica (1-indexada)
+ */
+function moverPosicaoProdutoSpins(guildOrClient, id, novaPosicao) {
+    const config = getSpinsPassesConfig();
+    const produtos = config.produtos || [];
+    const idx = produtos.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+
+    const [item] = produtos.splice(idx, 1);
+    const targetIdx = Math.max(0, Math.min(produtos.length, parseInt(novaPosicao, 10) - 1));
+    produtos.splice(targetIdx, 0, item);
+
+    const updated = setSpinsPassesConfig({ produtos });
+    sincronizarPainelSpinsAoVivo(guildOrClient, updated);
+    return {
+        produto: item,
+        antigaPosicao: idx + 1,
+        novaPosicao: targetIdx + 1,
+        produtos
+    };
+}
+
+/**
+ * Move um produto um passo ou diretamente para o topo/fim
+ * @param {'up'|'down'|'top'|'bottom'} acao 
+ */
+function trocarPosicaoProdutoSpins(guildOrClient, id, acao) {
+    const config = getSpinsPassesConfig();
+    const produtos = config.produtos || [];
+    const idx = produtos.findIndex(p => p.id === id);
+    if (idx === -1) return null;
+
+    let targetIdx = idx;
+    if (acao === 'up') {
+        targetIdx = Math.max(0, idx - 1);
+    } else if (acao === 'down') {
+        targetIdx = Math.min(produtos.length - 1, idx + 1);
+    } else if (acao === 'top') {
+        targetIdx = 0;
+    } else if (acao === 'bottom') {
+        targetIdx = produtos.length - 1;
+    }
+
+    if (targetIdx !== idx) {
+        const [item] = produtos.splice(idx, 1);
+        produtos.splice(targetIdx, 0, item);
+    }
+
+    const updated = setSpinsPassesConfig({ produtos });
+    sincronizarPainelSpinsAoVivo(guildOrClient, updated);
+    return {
+        produto: produtos[targetIdx],
+        antigaPosicao: idx + 1,
+        novaPosicao: targetIdx + 1,
+        produtos
+    };
+}
+
+/**
+ * Reordena todos os produtos com base em um critério
+ * @param {'spins_primeiro'|'passes_primeiro'|'menor_preco'|'maior_preco'|'alfabetico'} modo
+ */
+function reordenarProdutosSpins(guildOrClient, modo) {
+    const config = getSpinsPassesConfig();
+    let produtos = [...(config.produtos || [])];
+
+    if (modo === 'spins_primeiro') {
+        const spins = produtos.filter(p => p.tipo === 'spin').sort((a, b) => obterValorNumericoPreco(a.preco) - obterValorNumericoPreco(b.preco));
+        const passes = produtos.filter(p => p.tipo === 'passe').sort((a, b) => obterValorNumericoPreco(a.preco) - obterValorNumericoPreco(b.preco));
+        produtos = [...spins, ...passes];
+    } else if (modo === 'passes_primeiro') {
+        const passes = produtos.filter(p => p.tipo === 'passe').sort((a, b) => obterValorNumericoPreco(a.preco) - obterValorNumericoPreco(b.preco));
+        const spins = produtos.filter(p => p.tipo === 'spin').sort((a, b) => obterValorNumericoPreco(a.preco) - obterValorNumericoPreco(b.preco));
+        produtos = [...passes, ...spins];
+    } else if (modo === 'menor_preco') {
+        produtos.sort((a, b) => obterValorNumericoPreco(a.preco) - obterValorNumericoPreco(b.preco));
+    } else if (modo === 'maior_preco') {
+        produtos.sort((a, b) => obterValorNumericoPreco(b.preco) - obterValorNumericoPreco(a.preco));
+    } else if (modo === 'alfabetico') {
+        produtos.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+
+    const updated = setSpinsPassesConfig({ produtos });
+    sincronizarPainelSpinsAoVivo(guildOrClient, updated);
+    return { modo, produtos };
+}
+
 module.exports = {
     listarProdutosSpins,
     formatarPrecoProduto,
     adicionarProdutoSpins,
     removerProdutoSpins,
     atualizarPrecoSpins,
+    moverPosicaoProdutoSpins,
+    trocarPosicaoProdutoSpins,
+    reordenarProdutosSpins,
     sincronizarPainelSpinsAoVivo
 };

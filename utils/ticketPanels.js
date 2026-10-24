@@ -146,14 +146,24 @@ function gerarPainelSpinsPassesPayload() {
             'Confira os valores na tabela abaixo e selecione a opção desejada no menu suspenso para abrir seu atendimento imediato:'
         );
 
-    if (spins.length > 0) {
-        const spinsList = spins.map(s => '• ' + (s.emoji || '🌀') + ' **' + s.nome + ':** `' + formatPrice(s) + '`').join('\n');
-        embed.addFields({ name: '🌀 Pacotes de Spins (Blade Ball)', value: spinsList, inline: false });
-    }
+    const primeiroTipo = produtos.length > 0 ? produtos[0].tipo : 'spin';
+    const spinsList = spins.map(s => '• ' + (s.emoji || '🌀') + ' **' + s.nome + ':** `' + formatPrice(s) + '`').join('\n');
+    const passesList = passes.map(p => '• ' + (p.emoji || '🎟️') + ' **' + p.nome + ':** `' + formatPrice(p) + '`').join('\n');
 
-    if (passes.length > 0) {
-        const passesList = passes.map(p => '• ' + (p.emoji || '🎟️') + ' **' + p.nome + ':** `' + formatPrice(p) + '`').join('\n');
-        embed.addFields({ name: '🎟️ Passes & Gamepasses Oficiais', value: passesList, inline: false });
+    if (primeiroTipo === 'passe') {
+        if (passes.length > 0) {
+            embed.addFields({ name: '🎟️ Passes & Gamepasses Oficiais', value: passesList, inline: false });
+        }
+        if (spins.length > 0) {
+            embed.addFields({ name: '🌀 Pacotes de Spins (Blade Ball)', value: spinsList, inline: false });
+        }
+    } else {
+        if (spins.length > 0) {
+            embed.addFields({ name: '🌀 Pacotes de Spins (Blade Ball)', value: spinsList, inline: false });
+        }
+        if (passes.length > 0) {
+            embed.addFields({ name: '🎟️ Passes & Gamepasses Oficiais', value: passesList, inline: false });
+        }
     }
 
     embed.addFields({

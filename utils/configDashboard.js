@@ -336,7 +336,7 @@ function gerarPainelSpinsConfig(statusNotice) {
         )
         .setFooter({ text: 'Kensai Store • Gestão Completa de Spins & Passes' });
 
-    // Linha 1: Ações de Catálogo (Adicionar, Remover, Alterar Preço)
+    // Linha 1: Ações de Catálogo (Adicionar, Remover, Alterar Preço, Organizar Ordem)
     const rowAcoesCatalogo = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('cfg_btn_spins_add')
@@ -352,7 +352,12 @@ function gerarPainelSpinsConfig(statusNotice) {
             .setCustomId('cfg_btn_spins_price_mode')
             .setLabel('Alterar Preço')
             .setEmoji('💵')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_reorder_mode')
+            .setLabel('Organizar Ordem')
+            .setEmoji('🔃')
+            .setStyle(ButtonStyle.Secondary)
     );
 
     // Linha 2: Categoria
@@ -568,6 +573,125 @@ function gerarModalConfigTokens() {
 /**
  * Handler central de todas as interações do painel de configuração
  */
+
+/**
+ * 4.4 Tela para Reorganizar a Ordem dos Itens de Spins & Passes
+ */
+function gerarPainelSpinsOrdem(statusNotice, itemSelecionadoId) {
+    const spn = getSpinsPassesConfig();
+    const produtos = spn.produtos || [];
+
+    const itemSel = itemSelecionadoId ? produtos.find(p => p.id === itemSelecionadoId) : null;
+    const idx = itemSel ? produtos.findIndex(p => p.id === itemSelecionadoId) : -1;
+    const posAtual = idx + 1;
+
+    const listaNumerada = produtos.length > 0
+        ? produtos.map((p, i) => {
+            const marker = (itemSel && p.id === itemSel.id) ? '👉 ' : '';
+            return marker + '**#' + (i + 1) + '** ' + (p.emoji || (p.tipo === 'spin' ? '🌀' : '🎟️')) + ' **' + p.nome + '** • `' + formatarPrecoProduto(p.preco) + '`';
+        }).join('\n')
+        : '*(Nenhum item cadastrado no momento)*';
+
+    const embed = criarEmbedPadrao('🔃 Organização de Itens • Spins & Passes')
+        .setDescription(
+            (statusNotice ? statusNotice + '\n\n' : '') +
+            'Ajuste a ordem em que os pacotes de spins e passes aparecem no **painel público** e no **menu de compra**:\n\n' +
+            '📋 **Ordem Atual dos Produtos:**\n' +
+            listaNumerada + '\n\n' +
+            (itemSel 
+                ? '👉 **Item Selecionado:** ' + (itemSel.emoji || '') + ' **' + itemSel.nome + '** (Posição atual: **#' + posAtual + ' de ' + produtos.length + '**)\n*Use as setas abaixo para movimentar ou clique em uma organização rápida:*'
+                : '💡 *Selecione um item no menu abaixo para subir/descer sua posição ou use os botões rápidos de ordenação:*'
+            )
+        )
+        .setFooter({ text: 'Kensai Store • As alterações atualizam o painel público instantaneamente' });
+
+    const components = [];
+
+    // Linha 1: Dropdown para selecionar o item a ser movido
+    if (produtos.length > 0) {
+        const selectOptions = produtos.map((p, i) => ({
+            label: ('(#' + (i + 1) + ') ' + p.nome).substring(0, 50),
+            value: p.id,
+            description: ('Tipo: ' + (p.tipo === 'spin' ? 'Spin' : 'Passe') + ' • Preço: ' + formatarPrecoProduto(p.preco)).substring(0, 50),
+            emoji: p.emoji || (p.tipo === 'spin' ? '🌀' : '🎟️'),
+            default: itemSel ? p.id === itemSel.id : false
+        }));
+
+        components.push(new ActionRowBuilder().addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('cfg_sel_spins_order_pick')
+                .setPlaceholder('🔽 Selecione um item para reposicionar...')
+                .addOptions(selectOptions)
+        ));
+    }
+
+    // Linha 2: Botões de Movimentação do Item Selecionado
+    const rowMovimento = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_move_up_' + (itemSel ? itemSel.id : 'none'))
+            .setLabel('Subir (▲)')
+            .setEmoji('⬆️')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(!itemSel || idx === 0),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_move_down_' + (itemSel ? itemSel.id : 'none'))
+            .setLabel('Descer (▼)')
+            .setEmoji('⬇️')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(!itemSel || idx === produtos.length - 1),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_move_top_' + (itemSel ? itemSel.id : 'none'))
+            .setLabel('Topo')
+            .setEmoji('🔝')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(!itemSel || idx === 0),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_move_bottom_' + (itemSel ? itemSel.id : 'none'))
+            .setLabel('Fim')
+            .setEmoji('🔚')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(!itemSel || idx === produtos.length - 1)
+    );
+    components.push(rowMovimento);
+
+    // Linha 3: Presets de Organização Rápida
+    const rowPresets = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_sort_spins_first')
+            .setLabel('Spins Primeiro')
+            .setEmoji('🌀')
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_sort_passes_first')
+            .setLabel('Passes Primeiro')
+            .setEmoji('🎟️')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_sort_price_asc')
+            .setLabel('Menor Preço')
+            .setEmoji('📉')
+            .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_sort_price_desc')
+            .setLabel('Maior Preço')
+            .setEmoji('📈')
+            .setStyle(ButtonStyle.Secondary)
+    );
+    components.push(rowPresets);
+
+    // Linha 4: Voltar
+    const rowVoltar = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_nav_spins')
+            .setLabel('Voltar ao Menu de Spins')
+            .setEmoji('⬅️')
+            .setStyle(ButtonStyle.Secondary)
+    );
+    components.push(rowVoltar);
+
+    return { embeds: [embed], components };
+}
+
 async function handleConfigInteraction(interaction) {
     const { PermissionsBitField } = require('discord.js');
     const { checkPermission } = require('./permissions');
@@ -959,6 +1083,7 @@ module.exports = {
     gerarPainelSpinsConfig,
     gerarPainelSpinsRemover,
     gerarPainelSpinsPreco,
+    gerarPainelSpinsOrdem,
     gerarModalConfigTokens,
     handleConfigInteraction
 };

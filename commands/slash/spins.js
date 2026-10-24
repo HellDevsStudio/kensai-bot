@@ -10,7 +10,9 @@ const {
     formatarPrecoProduto, 
     adicionarProdutoSpins, 
     removerProdutoSpins, 
-    atualizarPrecoSpins 
+    atualizarPrecoSpins,
+    moverPosicaoProdutoSpins,
+    reordenarProdutosSpins
 } = require('../../utils/spinsManager');
 const { gerarPainelSpinsPassesPayload } = require('../../utils/ticketPanels');
 const { setSpinsPassesConfig } = require('../../utils/ticketConfigs');
@@ -81,7 +83,41 @@ module.exports = {
                         .setRequired(true)
                 )
         )
-        // 4. Subcomando: Listar
+        // 4. Subcomando: Mover Posição
+        .addSubcommand(sub =>
+            sub.setName('mover')
+                .setDescription('Move um item para uma posição específica (1, 2, 3...) no painel.')
+                .addStringOption(opt =>
+                    opt.setName('item')
+                        .setDescription('Selecione o item para reposicionar')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+                .addIntegerOption(opt =>
+                    opt.setName('posicao')
+                        .setDescription('Nova posição no painel (a partir de 1)')
+                        .setMinValue(1)
+                        .setRequired(true)
+                )
+        )
+        // 5. Subcomando: Organizar Catálogo
+        .addSubcommand(sub =>
+            sub.setName('organizar')
+                .setDescription('Reorganiza a ordem dos itens do painel por modo automático.')
+                .addStringOption(opt =>
+                    opt.setName('modo')
+                        .setDescription('Critério de organização')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: '🌀 Spins Primeiro (depois Passes)', value: 'spins_primeiro' },
+                            { name: '🎟️ Passes Primeiro (depois Spins)', value: 'passes_primeiro' },
+                            { name: '📉 Menor Preço (Crescente)', value: 'menor_preco' },
+                            { name: '📈 Maior Preço (Decrescente)', value: 'maior_preco' },
+                            { name: '🔤 Ordem Alfabética (A-Z)', value: 'alfabetico' }
+                        )
+                )
+        )
+        // 6. Subcomando: Listar
         .addSubcommand(sub =>
             sub.setName('listar')
                 .setDescription('Lista todos os pacotes de spins e passes ativos no catálogo.')
@@ -156,6 +192,41 @@ module.exports = {
             const embed = criarEmbedSucesso('💵 Preço Atualizado!',
                 'O valor comercial de **' + atualizado.nome + '** agora é: `' + formatarPrecoProduto(atualizado.preco) + '`\n\n' +
                 '🔄 *O painel público foi sincronizado na hora.*'
+            );
+            return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+        }
+
+        if (sub === 'mover') {
+            const itemId = interaction.options.getString('item');
+            const posicao = interaction.options.getInteger('posicao');
+            const res = await moverPosicaoProdutoSpins(interaction.guild, itemId, posicao);
+            if (!res) {
+                return interaction.reply({ content: '❌ Item não encontrado no catálogo.', flags: [MessageFlags.Ephemeral] });
+            }
+            const embed = criarEmbedSucesso('🔃 Posição Atualizada!',
+                'O item **' + res.produto.nome + '** foi movido com sucesso:\n\n' +
+                '• **Posição Anterior:** #' + res.antigaPosicao + '\n' +
+                '• **Nova Posição:** #' + res.novaPosicao + '\n\n' +
+                '🔄 *O painel público e dropdown de compra já foram sincronizados automaticamente.*'
+            );
+            return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
+        }
+
+        if (sub === 'organizar') {
+            const modo = interaction.options.getString('modo');
+            const res = await reordenarProdutosSpins(interaction.guild, modo);
+            const titulosModo = {
+                'spins_primeiro': '🌀 Spins Primeiro, seguidos por Passes',
+                'passes_primeiro': '🎟️ Passes Primeiro, seguidos por Spins',
+                'menor_preco': '📉 Menor Preço (Crescente)',
+                'maior_preco': '📈 Maior Preço (Decrescente)',
+                'alfabetico': '🔤 Ordem Alfabética (A-Z)'
+            };
+            const embed = criarEmbedSucesso('🔃 Catálogo Reorganizado!',
+                'A lista de produtos de Spins e Passes foi reorganizada com sucesso:\n\n' +
+                '• **Modo Aplicado:** `' + (titulosModo[modo] || modo) + '`\n' +
+                '• **Total de Itens:** `' + res.produtos.length + ' produtos`\n\n' +
+                '🔄 *O painel público e o menu de seleção já foram atualizados em tempo real.*'
             );
             return interaction.reply({ embeds: [embed], flags: [MessageFlags.Ephemeral] });
         }
