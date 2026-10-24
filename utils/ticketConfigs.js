@@ -104,11 +104,46 @@ function setItensConfig(updates) {
     return updated;
 }
 
+
+// 4. SPINS & PASSES CONFIG
+const DEFAULT_SPINS_PASSES = {
+    categoria_id: null,
+    canal_logs_id: null,
+    cargo_staff_id: null,
+    chave_pix: 'kensai.store.oficial@gmail.com',
+    canal_painel_id: null,
+    mensagem_painel_id: null,
+    produtos: [
+        { id: 'spin_50', tipo: 'spin', nome: '50 Spins', preco: '10.00', emoji: '🌀', descricao: 'Pacote de 50 Spins para roletar espadas e efeitos' },
+        { id: 'spin_100', tipo: 'spin', nome: '100 Spins', preco: '18.00', emoji: '🌀', descricao: 'Pacote de 100 Spins com entrega imediata' },
+        { id: 'spin_250', tipo: 'spin', nome: '250 Spins', preco: '40.00', emoji: '🌀', descricao: 'Pacote de 250 Spins de alto rendimento' },
+        { id: 'spin_500', tipo: 'spin', nome: '500 Spins', preco: '75.00', emoji: '🌀', descricao: 'Pacote de 500 Spins para caçadores de míticos' },
+        { id: 'spin_1000', tipo: 'spin', nome: '1.000 Spins', preco: '140.00', emoji: '🌀', descricao: 'Pacote colossal de 1.000 Spins' },
+        { id: 'passe_vip', tipo: 'passe', nome: 'Passe VIP Blade Ball', preco: '15.00', emoji: '🎟️', descricao: 'Vantagens exclusivas e status VIP no jogo' },
+        { id: 'passe_batalha', tipo: 'passe', nome: 'Passe de Batalha (Battlepass)', preco: '25.00', emoji: '🎟️', descricao: 'Desbloqueio de todas as recompensas da temporada' },
+        { id: 'passe_autoparry', tipo: 'passe', nome: 'Auto-Parry Assist Pass', preco: '35.00', emoji: '🎟️', descricao: 'Gamepass de assistência avançada de parry' },
+        { id: 'passe_custom', tipo: 'passe', nome: 'Passe Personalizado / Outra Gamepass', preco: 'A Combinar', emoji: '📦', descricao: 'Encomenda de qualquer outro passe ou item sob medida' }
+    ]
+};
+
+function getSpinsPassesConfig() {
+    return readConfigFile('spins_passes', DEFAULT_SPINS_PASSES);
+}
+
+function setSpinsPassesConfig(updates) {
+    const current = getSpinsPassesConfig();
+    const updated = Object.assign({}, current, updates);
+    writeConfigFile('spins_passes', updated);
+    return updated;
+}
+
 module.exports = {
     getSuporteConfig,
     setSuporteConfig,
     getTokensConfig,
     setTokensConfig,
     getItensConfig,
-    setItensConfig
+    setItensConfig,
+    getSpinsPassesConfig,
+    setSpinsPassesConfig
 };

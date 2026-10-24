@@ -1,7 +1,7 @@
 const { gerarPainelItensPayload: gerarPainelItensKensai } = require('./renderItensPanel');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { criarEmbedPadrao } = require('./embeds');
-const { getSuporteConfig, getTokensConfig, getItensConfig } = require('./ticketConfigs');
+const { getSuporteConfig, getTokensConfig, getItensConfig, getSpinsPassesConfig } = require('./ticketConfigs');
 
 const TOKEN_EMOJI_ID = '1562671579257770147';
 const TOKEN_EMOJI_STR = '<:token:1562671579257770147>';
@@ -118,11 +118,77 @@ function gerarPainelItensPayload(guild) {
     return gerarPainelItensKensai(guild);
 }
 
+
+/**
+ * Gera payload do Painel de Spins & Passes Oficial
+ */
+function gerarPainelSpinsPassesPayload() {
+    const config = getSpinsPassesConfig();
+    const produtos = config.produtos || [];
+
+    const spins = produtos.filter(p => p.tipo === 'spin');
+    const passes = produtos.filter(p => p.tipo === 'passe');
+
+    function formatPrice(p) {
+        if (typeof p.preco === 'number') {
+            return 'R$ ' + p.preco.toFixed(2).replace('.', ',');
+        }
+        const num = parseFloat(String(p.preco).replace(',', '.'));
+        if (!isNaN(num)) {
+            return 'R$ ' + num.toFixed(2).replace('.', ',');
+        }
+        return String(p.preco || 'A Combinar');
+    }
+
+    const embed = criarEmbedPadrao('🌀 Central de Spins & Passes • Kensai Store')
+        .setDescription(
+            'Adquira **Spins** e **Passes VIP / Battlepass** oficiais com entrega rápida e pagamento facilitado via Pix!\n\n' +
+            'Confira os valores na tabela abaixo e selecione a opção desejada no menu suspenso para abrir seu atendimento imediato:'
+        );
+
+    if (spins.length > 0) {
+        const spinsList = spins.map(s => '• ' + (s.emoji || '🌀') + ' **' + s.nome + ':** `' + formatPrice(s) + '`').join('\n');
+        embed.addFields({ name: '🌀 Pacotes de Spins (Blade Ball)', value: spinsList, inline: false });
+    }
+
+    if (passes.length > 0) {
+        const passesList = passes.map(p => '• ' + (p.emoji || '🎟️') + ' **' + p.nome + ':** `' + formatPrice(p) + '`').join('\n');
+        embed.addFields({ name: '🎟️ Passes & Gamepasses Oficiais', value: passesList, inline: false });
+    }
+
+    embed.addFields({
+        name: '📌 Como Funciona a Compra',
+        value: '1. Selecione o pacote desejado no menu suspenso abaixo;\n' +
+               '2. Um canal de atendimento privado será criado para você com a chave Pix e instruções;\n' +
+               '3. Envie o comprovante e seu Nick do jogo para a Staff realizar a entrega imediata!',
+        inline: false
+    });
+
+    embed.setFooter({ text: 'Kensai Store • Sistema Oficial de Spins & Passes' });
+
+    const selectOptions = produtos.map(p => ({
+        label: p.nome.substring(0, 50),
+        value: p.id,
+        description: ('Valor: ' + formatPrice(p) + (p.descricao ? ' • ' + p.descricao : '')).substring(0, 100),
+        emoji: p.emoji || (p.tipo === 'spin' ? '🌀' : '🎟️')
+    }));
+
+    const select = new StringSelectMenuBuilder()
+        .setCustomId('spins_passes_select')
+        .setPlaceholder('Escolha o pacote de Spins ou Passe desejado...')
+        .addOptions(selectOptions);
+
+    const rowSelect = new ActionRowBuilder().addComponents(select);
+
+    return { embeds: [embed], components: [rowSelect] };
+}
+
 module.exports = {
     TOKEN_EMOJI_ID,
     TOKEN_EMOJI_STR,
     TOKEN_EMOJI_OBJ,
     gerarPainelSuportePayload,
     gerarPainelTokensPayload,
-    gerarPainelItensPayload
+    gerarPainelItensPayload,
+    gerarPainelSpinsPassesPayload
 };

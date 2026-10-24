@@ -5,18 +5,21 @@ const fs = require('fs');
 const { 
     getSuporteConfig, setSuporteConfig,
     getTokensConfig, setTokensConfig,
-    getItensConfig, setItensConfig
+    getItensConfig, setItensConfig,
+    getSpinsPassesConfig, setSpinsPassesConfig
 } = require('../utils/ticketConfigs');
 
 // Salva backups das configurações reais para não sobrescrever em produção
 const origSuporte = Object.assign({}, getSuporteConfig());
 const origTokens = Object.assign({}, getTokensConfig());
 const origItens = Object.assign({}, getItensConfig());
+const origSpinsPasses = JSON.parse(JSON.stringify(getSpinsPassesConfig()));
 
 const { 
     gerarPainelSuportePayload, 
     gerarPainelTokensPayload, 
-    gerarPainelItensPayload 
+    gerarPainelItensPayload,
+    gerarPainelSpinsPassesPayload
 } = require('../utils/ticketPanels');
 
 const {
@@ -25,6 +28,7 @@ const {
     gerarPainelTokensConfig,
     gerarPainelItensConfig,
     gerarPainelDespachoPaineis,
+    gerarPainelSpinsConfig,
     gerarModalConfigTokens
 } = require('../utils/configDashboard');
 
@@ -165,10 +169,49 @@ runTest('10. Subtelas interativas de Suporte, Tokens e Itens contêm Selects de 
     assert.strictEqual(modal.data.custom_id, 'modal_cfg_tokens');
 });
 
+
+runTest('11. Leitura e escrita de spins_passes.json mantém catálogo e alteração de preços individuais', () => {
+    const spn = getSpinsPassesConfig();
+    assert.ok(Array.isArray(spn.produtos));
+    assert.ok(spn.produtos.length >= 6);
+    assert.ok(spn.produtos.some(p => p.id === 'spin_50'));
+    assert.ok(spn.produtos.some(p => p.id === 'passe_vip'));
+
+    // Testa alteração de preço individual
+    const produtos = JSON.parse(JSON.stringify(spn.produtos));
+    const prod = produtos.find(p => p.id === 'spin_50');
+    prod.preco = 12.50;
+    setSpinsPassesConfig({ produtos });
+
+    const reread = getSpinsPassesConfig();
+    const rereadProd = reread.produtos.find(p => p.id === 'spin_50');
+    assert.strictEqual(Number(rereadProd.preco), 12.50);
+});
+
+runTest('12. Painel de Spins & Passes gera embed oficial e Select spins_passes_select com opções', () => {
+    const payload = gerarPainelSpinsPassesPayload();
+    assert.ok(payload.embeds && payload.embeds.length > 0);
+    assert.strictEqual(payload.embeds[0].data.title, '🌀 Central de Spins & Passes • Kensai Store');
+    assert.ok(payload.components && payload.components.length > 0);
+    const select = payload.components[0].components[0];
+    assert.strictEqual(select.data.custom_id, 'spins_passes_select');
+    assert.ok(select.options.length >= 6);
+});
+
+runTest('13. Subtela interativa de Spins (/config) gera select de alteração de preço e selects de canal', () => {
+    const telaSpn = gerarPainelSpinsConfig();
+    assert.strictEqual(telaSpn.components[0].components[0].data.custom_id, 'cfg_sel_spins_change_price');
+    assert.strictEqual(telaSpn.components[1].components[0].data.custom_id, 'cfg_sel_spins_cat');
+    assert.strictEqual(telaSpn.components[2].components[0].data.custom_id, 'cfg_sel_spins_logs');
+    assert.strictEqual(telaSpn.components[3].components[0].data.custom_id, 'cfg_sel_spins_role');
+    assert.strictEqual(telaSpn.components[4].components[0].data.custom_id, 'cfg_send_panel_spins');
+});
+
 // Cleanup: restaura fielmente o estado original pré-teste
 setSuporteConfig(origSuporte);
 setTokensConfig(origTokens);
 setItensConfig(origItens);
+setSpinsPassesConfig(origSpinsPasses);
 
 console.log(`\n=======================================================`);
 console.log(`   RESULTADO DOS TESTES DE TICKET: ${passed}/${total} PASSADOS`);

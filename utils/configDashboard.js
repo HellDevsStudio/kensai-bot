@@ -2,7 +2,8 @@ const {
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
-    ChannelSelectMenuBuilder, 
+    ChannelSelectMenuBuilder,
+    StringSelectMenuBuilder, 
     RoleSelectMenuBuilder, 
     ChannelType, 
     ModalBuilder, 
@@ -15,12 +16,14 @@ const { lerEstoque } = require('./itemControl');
 const { 
     getSuporteConfig, setSuporteConfig, 
     getTokensConfig, setTokensConfig, 
-    getItensConfig, setItensConfig 
+    getItensConfig, setItensConfig,
+    getSpinsPassesConfig, setSpinsPassesConfig
 } = require('./ticketConfigs');
 const { 
     gerarPainelSuportePayload, 
     gerarPainelTokensPayload, 
-    gerarPainelItensPayload 
+    gerarPainelItensPayload,
+    gerarPainelSpinsPassesPayload
 } = require('./ticketPanels');
 
 /**
@@ -66,6 +69,18 @@ function gerarPainelPrincipal(statusNotice) {
                            '• **Cargo Staff:** ' + (itn.cargo_staff_id ? '<@&' + itn.cargo_staff_id + '>' : '❌ *Não configurado*');
                 })(),
                 inline: false
+            },
+            {
+                name: '🌀 4. Spins & Passes (`spins_passes.json`)',
+                value: (() => {
+                    const spn = getSpinsPassesConfig();
+                    const prods = spn.produtos || [];
+                    return '• **Catálogo Fixo:** `' + prods.length + ' pacotes e passes cadastrados`\n' +
+                           '• **Categoria:** ' + (spn.categoria_id ? '<#' + spn.categoria_id + '>' : '❌ *Não configurada*') + '\n' +
+                           '• **Canal de Logs:** ' + (spn.canal_logs_id ? '<#' + spn.canal_logs_id + '>' : '❌ *Não configurado*') + '\n' +
+                           '• **Cargo Staff:** ' + (spn.cargo_staff_id ? '<@&' + spn.cargo_staff_id + '>' : '❌ *Não configurado*');
+                })(),
+                inline: false
             }
         )
         .setFooter({ text: 'Clique nos botões abaixo para configurar ou enviar os painéis' });
@@ -73,17 +88,22 @@ function gerarPainelPrincipal(statusNotice) {
     const rowNav = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('cfg_nav_suporte')
-            .setLabel('Configurar Suporte')
+            .setLabel('Suporte')
             .setEmoji('🎫')
             .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
             .setCustomId('cfg_nav_tokens')
-            .setLabel('Configurar Tokens')
+            .setLabel('Tokens')
             .setEmoji('💰')
             .setStyle(ButtonStyle.Primary),
         new ButtonBuilder()
+            .setCustomId('cfg_nav_spins')
+            .setLabel('Spins & Passes')
+            .setEmoji('🌀')
+            .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
             .setCustomId('cfg_nav_itens')
-            .setLabel('Configurar Itens')
+            .setLabel('Itens')
             .setEmoji('⚔️')
             .setStyle(ButtonStyle.Primary)
     );
@@ -276,6 +296,84 @@ function gerarPainelItensConfig(statusNotice) {
     return { embeds: [embed], components: [rowCat, rowLogs, rowRole, rowBotoes] };
 }
 
+
+/**
+ * 4.1 Painel Interativo de Configuração de Spins & Passes
+ */
+function gerarPainelSpinsConfig(statusNotice) {
+    const spn = getSpinsPassesConfig();
+    const produtos = spn.produtos || [];
+
+    function formatPreco(p) {
+        if (typeof p.preco === 'number') return 'R$ ' + p.preco.toFixed(2).replace('.', ',');
+        const n = parseFloat(String(p.preco).replace(',', '.'));
+        if (!isNaN(n)) return 'R$ ' + n.toFixed(2).replace('.', ',');
+        return String(p.preco || 'A Combinar');
+    }
+
+    const tabelaPrecos = produtos.map(p => '• ' + (p.emoji || '🌀') + ' **' + p.nome + ':** `' + formatPreco(p) + '`').join('\n');
+
+    const embed = criarEmbedPadrao('⚙️ Configuração • Spins & Passes')
+        .setDescription(
+            (statusNotice ? statusNotice + '\n\n' : '') +
+            'Configure os parâmetros de venda, preços individuais e canais de **Spins e Passes**:\n\n' +
+            '📁 **Categoria Atual:** ' + (spn.categoria_id ? '<#' + spn.categoria_id + '>' : '❌ *Não configurada*') + '\n' +
+            '📜 **Canal de Logs Atual:** ' + (spn.canal_logs_id ? '<#' + spn.canal_logs_id + '>' : '❌ *Não configurado*') + '\n' +
+            '🛡️ **Cargo Staff Atual:** ' + (spn.cargo_staff_id ? '<@&' + spn.cargo_staff_id + '>' : '❌ *Não configurado*') + '\n' +
+            '🔑 **Chave Pix Oficial:** `' + (spn.chave_pix || 'kensai.store.oficial@gmail.com') + '`\n\n' +
+            '💵 **Preços Atuais Configurados:**\n' + tabelaPrecos + '\n\n' +
+            '💡 *Selecione qualquer item no primeiro menu abaixo para alterar o preço dele!*'
+        )
+        .setFooter({ text: 'Kensai Store • Gestão de Spins & Passes' });
+
+    const selectPrecos = new StringSelectMenuBuilder()
+        .setCustomId('cfg_sel_spins_change_price')
+        .setPlaceholder('💵 Selecione um item para alterar o preço...')
+        .addOptions(produtos.map(p => ({
+            label: p.nome.substring(0, 50),
+            value: p.id,
+            description: ('Preço atual: ' + formatPreco(p)).substring(0, 50),
+            emoji: p.emoji || (p.tipo === 'spin' ? '🌀' : '🎟️')
+        })));
+
+    const rowPreco = new ActionRowBuilder().addComponents(selectPrecos);
+
+    const rowCat = new ActionRowBuilder().addComponents(
+        new ChannelSelectMenuBuilder()
+            .setCustomId('cfg_sel_spins_cat')
+            .setPlaceholder('📁 Selecione a Categoria dos Tickets de Spins/Passes...')
+            .setChannelTypes(ChannelType.GuildCategory)
+    );
+
+    const rowLogs = new ActionRowBuilder().addComponents(
+        new ChannelSelectMenuBuilder()
+            .setCustomId('cfg_sel_spins_logs')
+            .setPlaceholder('📜 Selecione o Canal de Logs de Spins/Passes...')
+            .setChannelTypes(ChannelType.GuildText)
+    );
+
+    const rowRole = new ActionRowBuilder().addComponents(
+        new RoleSelectMenuBuilder()
+            .setCustomId('cfg_sel_spins_role')
+            .setPlaceholder('🛡️ Selecione o Cargo da Staff de Spins/Passes...')
+    );
+
+    const rowBotoes = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_send_panel_spins')
+            .setLabel('Enviar Painel de Spins & Passes Aqui')
+            .setEmoji('📢')
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('cfg_nav_home')
+            .setLabel('Voltar ao Menu')
+            .setEmoji('⬅️')
+            .setStyle(ButtonStyle.Secondary)
+    );
+
+    return { embeds: [embed], components: [rowPreco, rowCat, rowLogs, rowRole, rowBotoes] };
+}
+
 /**
  * 5. Painel de Despacho Rápido de Painéis
  */
@@ -286,6 +384,7 @@ function gerarPainelDespachoPaineis(statusNotice) {
             'Clique no botão abaixo para fixar o painel oficial desejado diretamente **neste canal**:\n\n' +
             '• **🎫 Painel de Suporte:** Botão para abertura de dúvidas e denúncias.\n' +
             '• **💰 Painel de Tokens:** Dropdown com pacotes rápidos + botão de quantia customizada.\n' +
+            '• **🌀 Painel de Spins & Passes:** Dropdown com pacotes de spins e gamepasses.\n' +
             '• **⚔️ Catálogo de Itens:** Dropdown de compra direta de produtos da loja.'
         )
         .setFooter({ text: 'O painel será enviado como uma nova mensagem pública no canal' });
@@ -293,17 +392,22 @@ function gerarPainelDespachoPaineis(statusNotice) {
     const rowPaineis = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('cfg_send_panel_suporte')
-            .setLabel('Enviar Suporte')
+            .setLabel('Suporte')
             .setEmoji('🎫')
             .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
             .setCustomId('cfg_send_panel_tokens')
-            .setLabel('Enviar Tokens')
+            .setLabel('Tokens')
             .setEmoji('💰')
             .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
+            .setCustomId('cfg_send_panel_spins')
+            .setLabel('Spins/Passes')
+            .setEmoji('🌀')
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
             .setCustomId('cfg_send_panel_itens')
-            .setLabel('Enviar Catálogo Itens')
+            .setLabel('Itens')
             .setEmoji('⚔️')
             .setStyle(ButtonStyle.Success)
     );
@@ -384,6 +488,9 @@ async function handleConfigInteraction(interaction) {
     if (cid === 'cfg_nav_tokens') {
         return interaction.update(gerarPainelTokensConfig());
     }
+    if (cid === 'cfg_nav_spins') {
+        return interaction.update(gerarPainelSpinsConfig());
+    }
     if (cid === 'cfg_nav_itens') {
         return interaction.update(gerarPainelItensConfig());
     }
@@ -411,6 +518,45 @@ async function handleConfigInteraction(interaction) {
         const roleId = interaction.values[0];
         setSuporteConfig({ cargo_staff_id: roleId });
         return interaction.update(gerarPainelSuporteConfig('✅ **Cargo da Staff de Suporte atualizado para <@&' + roleId + '>!**'));
+    }
+
+    
+    // D.1 SELECTS DE CANAL, CARGO E PREÇO (SPINS & PASSES)
+    if (cid === 'cfg_sel_spins_cat') {
+        const catId = interaction.values[0];
+        setSpinsPassesConfig({ categoria_id: catId });
+        return interaction.update(gerarPainelSpinsConfig('✅ **Categoria de Spins & Passes atualizada para <#' + catId + '>!**'));
+    }
+    if (cid === 'cfg_sel_spins_logs') {
+        const logId = interaction.values[0];
+        setSpinsPassesConfig({ canal_logs_id: logId });
+        return interaction.update(gerarPainelSpinsConfig('✅ **Canal de Logs de Spins & Passes atualizado para <#' + logId + '>!**'));
+    }
+    if (cid === 'cfg_sel_spins_role') {
+        const roleId = interaction.values[0];
+        setSpinsPassesConfig({ cargo_staff_id: roleId });
+        return interaction.update(gerarPainelSpinsConfig('✅ **Cargo da Staff de Spins & Passes atualizado para <@&' + roleId + '>!**'));
+    }
+    if (cid === 'cfg_sel_spins_change_price') {
+        const prodId = interaction.values[0];
+        const spnCfg = getSpinsPassesConfig();
+        const prod = (spnCfg.produtos || []).find(p => p.id === prodId);
+        if (!prod) return interaction.reply({ content: '❌ Produto não encontrado.', flags: [MessageFlags.Ephemeral] });
+
+        const modal = new ModalBuilder()
+            .setCustomId('modal_spins_price_' + prod.id)
+            .setTitle(('Alterar Preço • ' + prod.nome).substring(0, 45));
+
+        const input = new TextInputBuilder()
+            .setCustomId('input_novo_preco')
+            .setLabel('Novo Preço (ex: 20.00 ou A Combinar):')
+            .setValue(String(prod.preco))
+            .setPlaceholder('Ex: 25.00 ou 18,50 ou A Combinar')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        modal.addComponents(new ActionRowBuilder().addComponents(input));
+        return interaction.showModal(modal);
     }
 
     // D. SELECTS DE CANAL & CARGO (TOKENS)
@@ -464,6 +610,17 @@ async function handleConfigInteraction(interaction) {
         setTokensConfig({ canal_painel_id: interaction.channel.id, mensagem_painel_id: msg.id });
         return interaction.reply({
             content: '✅ **Painel de Tokens** enviado com sucesso neste canal!',
+            flags: [MessageFlags.Ephemeral]
+        });
+    }
+
+    
+    if (cid === 'cfg_send_panel_spins') {
+        const payload = gerarPainelSpinsPassesPayload();
+        const msg = await interaction.channel.send(payload);
+        setSpinsPassesConfig({ canal_painel_id: interaction.channel.id, mensagem_painel_id: msg.id });
+        return interaction.reply({
+            content: '🌀 **Painel de Spins & Passes** enviado com sucesso neste canal!',
             flags: [MessageFlags.Ephemeral]
         });
     }
@@ -558,6 +715,50 @@ async function handleConfigInteraction(interaction) {
             flags: [MessageFlags.Ephemeral]
         });
     }
+
+    // H. MODAL SUBMIT (SPINS & PASSES PRICE)
+    if (cid.startsWith('modal_spins_price_')) {
+        const prodId = cid.replace('modal_spins_price_', '');
+        const rawPreco = interaction.fields.getTextInputValue('input_novo_preco').trim();
+        const spnCfg = getSpinsPassesConfig();
+        const produtos = spnCfg.produtos || [];
+        const prod = produtos.find(p => p.id === prodId);
+        if (!prod) {
+            return interaction.reply({ content: '❌ Produto não encontrado.', flags: [MessageFlags.Ephemeral] });
+        }
+
+        let novoPreco = rawPreco;
+        const num = parseFloat(rawPreco.replace(/[^\d,\.]/g, '').replace(',', '.'));
+        if (!isNaN(num) && num >= 0 && !/[a-zA-Z]/.test(rawPreco)) {
+            novoPreco = num.toFixed(2);
+        }
+
+        prod.preco = novoPreco;
+        const updated = setSpinsPassesConfig({ produtos });
+
+        // Sincroniza em tempo real com a mensagem do painel público se já tiver sido enviada
+        if (updated.canal_painel_id && updated.mensagem_painel_id && interaction.guild) {
+            try {
+                const chan = interaction.guild.channels.cache.get(updated.canal_painel_id) || await interaction.guild.channels.fetch(updated.canal_painel_id).catch(() => null);
+                if (chan && chan.isTextBased()) {
+                    const msg = await chan.messages.fetch(updated.mensagem_painel_id).catch(() => null);
+                    if (msg) {
+                        const payload = gerarPainelSpinsPassesPayload();
+                        await msg.edit(payload).catch(() => {});
+                    }
+                }
+            } catch (err) {
+                console.error('[Config] Erro ao sincronizar mensagem de spins/passes:', err.message);
+            }
+        }
+
+        const precoFormatado = typeof novoPreco === 'number' ? 'R$ ' + novoPreco.toFixed(2).replace('.', ',') : (parseFloat(novoPreco) ? 'R$ ' + parseFloat(novoPreco).toFixed(2).replace('.', ',') : String(novoPreco));
+        return interaction.reply({
+            content: '✅ **Preço de ' + prod.nome + ' atualizado com sucesso para `' + precoFormatado + '`!**\n\n' +
+                     '🔄 *O painel público e novos pedidos já refletem este novo valor.*',
+            flags: [MessageFlags.Ephemeral]
+        });
+    }
 }
 
 module.exports = {
@@ -566,6 +767,7 @@ module.exports = {
     gerarPainelTokensConfig,
     gerarPainelItensConfig,
     gerarPainelDespachoPaineis,
+    gerarPainelSpinsConfig,
     gerarModalConfigTokens,
     handleConfigInteraction
 };

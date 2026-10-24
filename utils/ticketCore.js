@@ -9,7 +9,7 @@ const {
 } = require('discord.js');
 const { criarEmbedPadrao, criarEmbedSucesso, criarEmbedErro } = require('./embeds');
 const { readData, writeData } = require('./db');
-const { getSuporteConfig, getTokensConfig, getItensConfig } = require('./ticketConfigs');
+const { getSuporteConfig, getTokensConfig, getItensConfig, getSpinsPassesConfig } = require('./ticketConfigs');
 const { checkPermission } = require('./permissions');
 
 const TOKEN_EMOJI_STR = '<:token:1562671579257770147>';
@@ -32,6 +32,7 @@ function gerarProtocolo() {
 function getConfigPorTipo(tipo) {
     if (tipo === 'tokens') return getTokensConfig();
     if (tipo === 'itens') return getItensConfig();
+    if (tipo === 'spins' || tipo === 'passe') return getSpinsPassesConfig();
     return getSuporteConfig();
 }
 
@@ -73,7 +74,7 @@ async function abrirTicket(interaction, tipo, detalhes) {
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     const protocolo = gerarProtocolo();
-    const prefixCanal = tipo === 'tokens' ? 'token-' : (tipo === 'itens' ? 'item-' : (tipo === 'compra' ? 'compra-' : (tipo === 'denuncia' ? 'denuncia-' : 'suporte-')));
+    const prefixCanal = tipo === 'tokens' ? 'token-' : (tipo === 'itens' ? 'item-' : (tipo === 'spins' ? 'spin-' : (tipo === 'passe' ? 'passe-' : (tipo === 'compra' ? 'compra-' : (tipo === 'denuncia' ? 'denuncia-' : 'suporte-')))));
     const nomeCanal = prefixCanal + user.username.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     // Permissões iniciais do canal
@@ -208,6 +209,38 @@ async function abrirTicket(interaction, tipo, detalhes) {
                 { name: '👤 Cliente', value: user.toString(), inline: true },
                 { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
             );
+    } else if (tipo === 'spins' || tipo === 'passe') {
+        const isSpin = tipo === 'spins' || detalhes?.tipo === 'spin';
+        titulo = (isSpin ? '🌀 Pedido de Spins' : '🎟️ Pedido de Passe') + ' • Kensai Store';
+        const itemNome = detalhes?.nome || (isSpin ? 'Pacote de Spins' : 'Passe Blade Ball');
+        let precoFormatado = 'A Combinar';
+        if (typeof detalhes?.preco === 'number') {
+            precoFormatado = 'R$ ' + detalhes.preco.toFixed(2).replace('.', ',');
+        } else if (detalhes?.preco) {
+            const num = parseFloat(String(detalhes.preco).replace(',', '.'));
+            precoFormatado = !isNaN(num) ? 'R$ ' + num.toFixed(2).replace('.', ',') : String(detalhes.preco);
+        }
+        const chavePix = sysConfig.chave_pix || 'kensai.store.oficial@gmail.com';
+
+        desc = '> Olá ' + user.toString() + ', seu pedido de **' + itemNome + '** foi iniciado com sucesso!\n\n' +
+            '📌 **COMO FINALIZAR SUA COMPRA:**\n' +
+            '1. Faça a transferência Pix no valor de **' + precoFormatado + '** para a chave abaixo;\n' +
+            '2. Envie o **comprovante de pagamento** neste chat;\n' +
+            '3. Envie o seu **Nick no Roblox** para receber os spins / ativação do passe;\n' +
+            '4. A equipe da Staff verificará e confirmará a entrega!';
+
+        embedTicket
+            .setTitle(titulo)
+            .setDescription(desc)
+            .addFields(
+                { name: isSpin ? '🌀 Pacote' : '🎟️ Passe', value: '`' + itemNome + '`', inline: true },
+                { name: '💵 Valor a Pagar', value: '`' + precoFormatado + '`', inline: true },
+                { name: '📦 Status do Pedido', value: '🟡 **Aguardando Pagamento & Nick**', inline: true },
+                { name: '🔑 Chave Pix da Loja', value: '`' + chavePix + '`', inline: false },
+                { name: '📋 Protocolo', value: '`' + protocolo + '`', inline: true },
+                { name: '👤 Cliente', value: user.toString(), inline: true },
+                { name: '⏰ Aberto em', value: '<t:' + Math.floor(Date.now() / 1000) + ':R>', inline: true }
+            );
     } else if (tipo === 'denuncia') {
         titulo = '🚨 Central de Denúncias & Ouvidoria • Kensai Store';
         desc = '> Olá ' + user.toString() + ', sua denúncia foi protocolada com prioridade máxima.\n' +
@@ -308,6 +341,20 @@ async function abrirTicket(interaction, tipo, detalhes) {
             new ButtonBuilder()
                 .setCustomId('item_recusar_' + protocolo)
                 .setLabel('Cancelar Pedido')
+                .setEmoji('❌')
+                .setStyle(ButtonStyle.Danger)
+        );
+        components.push(rowVenda);
+    } else if (tipo === 'spins' || tipo === 'passe') {
+        const rowVenda = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('spin_aprovar_' + protocolo)
+                .setLabel('Confirmar Entrega (Spins/Passe)')
+                .setEmoji('✅')
+                .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+                .setCustomId('spin_recusar_' + protocolo)
+                .setLabel('Cancelar / Recusar')
                 .setEmoji('❌')
                 .setStyle(ButtonStyle.Danger)
         );
@@ -665,6 +712,91 @@ async function chamarCliente(interaction, protocolo) {
     });
 }
 
+
+/**
+ * Staff confirma entrega de Spins ou Passe
+ */
+async function aprovarEntregaSpins(interaction, protocolo) {
+    const ativos = readData('tickets_ativos', {});
+    const ticket = ativos[protocolo];
+    const sysConfig = getConfigPorTipo('spins');
+
+    if (!isMemberStaff(interaction.member, sysConfig)) {
+        return interaction.reply({ content: '❌ Apenas membros da Staff podem confirmar a entrega.', flags: [MessageFlags.Ephemeral] });
+    }
+
+    if (!ticket) return interaction.reply({ content: '❌ Ticket não encontrado.', flags: [MessageFlags.Ephemeral] });
+
+    if (ticket.statusCompra === 'APROVADO') {
+        return interaction.reply({ content: '⚠️ Este pedido já foi aprovado anteriormente!', flags: [MessageFlags.Ephemeral] });
+    }
+
+    ticket.statusCompra = 'APROVADO';
+    ticket.aprovadoPor = interaction.user.id;
+    ticket.aprovadoEm = Date.now();
+    ativos[protocolo] = ticket;
+    writeData('tickets_ativos', ativos);
+
+    const produtoNome = ticket.detalhes?.nome || 'Spins / Passe';
+    let precoFormatado = 'A Combinar';
+    if (typeof ticket.detalhes?.preco === 'number') {
+        precoFormatado = 'R$ ' + ticket.detalhes.preco.toFixed(2).replace('.', ',');
+    } else if (ticket.detalhes?.preco) {
+        precoFormatado = String(ticket.detalhes.preco);
+    }
+
+    const embedAprovado = criarEmbedPadrao('🎉 Compra Aprovada & Entrega Concluída!')
+        .setDescription(
+            'A entrega de <@' + ticket.userId + '> foi realizada com sucesso!\n\n' +
+            '• 🌀 **Produto Entregue:** `' + produtoNome + '`\n' +
+            '• 💵 **Preço Pago:** `' + precoFormatado + '`\n' +
+            '• 🛡️ **Entregue por:** ' + interaction.user.toString() + '\n' +
+            '• ⏰ **Data:** <t:' + Math.floor(Date.now() / 1000) + ':f>\n\n' +
+            '✨ *Agradecemos pela preferência na **Kensai Store**! Deixe seu feedback usando `/avaliar`.*'
+        )
+        .setFooter({ text: 'Kensai Store • Pedido ' + protocolo });
+
+    await interaction.channel.send({
+        content: '🎉 <@' + ticket.userId + '>, seu pedido de **' + produtoNome + '** foi entregue!',
+        embeds: [embedAprovado]
+    });
+
+    return interaction.reply({ content: '✅ Entrega de ' + produtoNome + ' registrada com sucesso!', flags: [MessageFlags.Ephemeral] });
+}
+
+/**
+ * Staff cancela ou recusa pedido de Spins ou Passe
+ */
+async function recusarEntregaSpins(interaction, protocolo) {
+    const ativos = readData('tickets_ativos', {});
+    const ticket = ativos[protocolo];
+    const sysConfig = getConfigPorTipo('spins');
+
+    if (!isMemberStaff(interaction.member, sysConfig)) {
+        return interaction.reply({ content: '❌ Apenas membros da Staff podem recusar o pedido.', flags: [MessageFlags.Ephemeral] });
+    }
+
+    if (!ticket) return interaction.reply({ content: '❌ Ticket não encontrado.', flags: [MessageFlags.Ephemeral] });
+
+    ticket.statusCompra = 'RECUSADO';
+    ticket.recusadoPor = interaction.user.id;
+    ticket.recusadoEm = Date.now();
+    ativos[protocolo] = ticket;
+    writeData('tickets_ativos', ativos);
+
+    const embedRecusado = criarEmbedErro('❌ Pedido Cancelado / Recusado',
+        'O pedido de spins/passe **' + protocolo + '** foi cancelado por ' + interaction.user.toString() + '.\n\n' +
+        'Motivos: Comprovante não enviado, divergência nos dados ou cancelamento solicitado.'
+    );
+
+    await interaction.channel.send({
+        content: '⚠️ <@' + ticket.userId + '>, seu pedido foi marcado como **recusado**.',
+        embeds: [embedRecusado]
+    });
+
+    return interaction.reply({ content: '⚠️ Pedido ' + protocolo + ' marcado como cancelado.', flags: [MessageFlags.Ephemeral] });
+}
+
 module.exports = {
     TOKEN_EMOJI_STR,
     gerarProtocolo,
@@ -674,5 +806,7 @@ module.exports = {
     chamarCliente,
     aprovarCompraToken,
     recusarCompraToken,
-    aprovarEntregaItem
+    aprovarEntregaItem,
+    aprovarEntregaSpins,
+    recusarEntregaSpins
 };

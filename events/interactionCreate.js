@@ -82,6 +82,15 @@ module.exports = {
                 return abrirTicket(interaction, 'itens', item);
             }
 
+            // C. Ticket: Spins & Passes
+            if (interaction.customId === 'spins_passes_select') {
+                const itemId = interaction.values[0];
+                const { getSpinsPassesConfig } = require('../utils/ticketConfigs');
+                const spnCfg = getSpinsPassesConfig();
+                const prod = (spnCfg.produtos || []).find(p => p.id === itemId) || { id: itemId, nome: 'Spins / Passe', preco: 'A Combinar' };
+                return abrirTicket(interaction, 'spins', prod);
+            }
+
             if (interaction.customId === 'helpstaff_category_select') {
                 const category = interaction.values[0];
                 const helpstaffCommand = client.slashCommands.get('helpstaff');
@@ -315,6 +324,16 @@ module.exports = {
                 const protocolo = cid.replace('item_aprovar_', '');
                 return aprovarEntregaItem(interaction, protocolo);
             }
+            if (cid.startsWith('spin_aprovar_')) {
+                const protocolo = cid.replace('spin_aprovar_', '');
+                const { aprovarEntregaSpins } = require('../utils/ticketCore');
+                return aprovarEntregaSpins(interaction, protocolo);
+            }
+            if (cid.startsWith('spin_recusar_')) {
+                const protocolo = cid.replace('spin_recusar_', '');
+                const { recusarEntregaSpins } = require('../utils/ticketCore');
+                return recusarEntregaSpins(interaction, protocolo);
+            }
             // 10. Tickets - Gerenciamento (Fechar, Assumir, Chamar)
             if (cid.startsWith('ticket_fechar_')) {
                 const protocolo = cid.replace('ticket_fechar_', '');
@@ -355,7 +374,7 @@ module.exports = {
                     return await handleAvaliarModal(interaction);
                 }
 
-                if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_')) {
+                if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_') || interaction.customId.startsWith('modal_spins_price_')) {
                     return await handleConfigInteraction(interaction);
                 }
 
