@@ -374,7 +374,7 @@ module.exports = {
                     return await handleAvaliarModal(interaction);
                 }
 
-                if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_') || interaction.customId.startsWith('modal_spins_price_')) {
+                if (interaction.customId === 'modal_cfg_tokens' || interaction.customId.startsWith('cfg_') || interaction.customId.startsWith('modal_spins_price_') || interaction.customId === 'modal_spins_add_item') {
                     return await handleConfigInteraction(interaction);
                 }
 

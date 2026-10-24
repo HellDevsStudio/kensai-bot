@@ -29,6 +29,7 @@ const CATEGORIAS_STAFF = {
             '`/item adicionar` - Adiciona item com busca semântica, upload de imagem e categoria',
             '`/item listar` - Exibe a lista completa de itens cadastrados no estoque',
             '`/item remover [id]` - Remove um item do estoque oficial',
+            '`/spins` (ou `k!spins`) - Gerencia pacotes de spins e passes (adicionar, remover, listar, preço)',
             '`/dm [usuario] [mensagem]` - Envia mensagem oficial da loja no privado (DM) do cliente'
         ]
     },

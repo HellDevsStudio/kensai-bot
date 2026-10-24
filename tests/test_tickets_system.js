@@ -29,8 +29,15 @@ const {
     gerarPainelItensConfig,
     gerarPainelDespachoPaineis,
     gerarPainelSpinsConfig,
+    gerarPainelSpinsRemover,
+    gerarPainelSpinsPreco,
     gerarModalConfigTokens
 } = require('../utils/configDashboard');
+const {
+    adicionarProdutoSpins,
+    removerProdutoSpins,
+    atualizarPrecoSpins
+} = require('../utils/spinsManager');
 
 const ticketCore = require('../utils/ticketCore');
 const slashConfig = require('../commands/slash/config');
@@ -198,13 +205,50 @@ runTest('12. Painel de Spins & Passes gera embed oficial e Select spins_passes_s
     assert.ok(select.options.length >= 6);
 });
 
-runTest('13. Subtela interativa de Spins (/config) gera select de alteração de preço e selects de canal', () => {
+runTest('13. Subtela interativa de Spins (/config) gera botões de adicionar, remover, preço e selects de canal', () => {
     const telaSpn = gerarPainelSpinsConfig();
-    assert.strictEqual(telaSpn.components[0].components[0].data.custom_id, 'cfg_sel_spins_change_price');
+    assert.strictEqual(telaSpn.components[0].components[0].data.custom_id, 'cfg_btn_spins_add');
+    assert.strictEqual(telaSpn.components[0].components[1].data.custom_id, 'cfg_btn_spins_rem_mode');
+    assert.strictEqual(telaSpn.components[0].components[2].data.custom_id, 'cfg_btn_spins_price_mode');
     assert.strictEqual(telaSpn.components[1].components[0].data.custom_id, 'cfg_sel_spins_cat');
     assert.strictEqual(telaSpn.components[2].components[0].data.custom_id, 'cfg_sel_spins_logs');
     assert.strictEqual(telaSpn.components[3].components[0].data.custom_id, 'cfg_sel_spins_role');
     assert.strictEqual(telaSpn.components[4].components[0].data.custom_id, 'cfg_send_panel_spins');
+});
+
+runTest('14. Tela de remoção de itens de Spins gera select cfg_sel_spins_delete_item', () => {
+    const telaRem = gerarPainelSpinsRemover();
+    assert.ok(telaRem.embeds && telaRem.embeds.length > 0);
+    assert.strictEqual(telaRem.components[0].components[0].data.custom_id, 'cfg_sel_spins_delete_item');
+    assert.strictEqual(telaRem.components[1].components[0].data.custom_id, 'cfg_nav_spins');
+});
+
+runTest('15. Tela de alteração de preço gera select cfg_sel_spins_change_price', () => {
+    const telaPrc = gerarPainelSpinsPreco();
+    assert.ok(telaPrc.embeds && telaPrc.embeds.length > 0);
+    assert.strictEqual(telaPrc.components[0].components[0].data.custom_id, 'cfg_sel_spins_change_price');
+    assert.strictEqual(telaPrc.components[1].components[0].data.custom_id, 'cfg_nav_spins');
+});
+
+runTest('16. adicionarProdutoSpins e removerProdutoSpins funcionam de forma atômica', () => {
+    const novo = adicionarProdutoSpins(null, {
+        nome: 'Teste 999 Spins',
+        tipo: 'spin',
+        preco: '199.90',
+        emoji: '🌀',
+        descricao: 'Pacote de teste unitário'
+    });
+    assert.strictEqual(novo.nome, 'Teste 999 Spins');
+    assert.strictEqual(Number(novo.preco), 199.90);
+
+    const configs = getSpinsPassesConfig();
+    assert.ok(configs.produtos.some(p => p.id === novo.id));
+
+    const removido = removerProdutoSpins(null, novo.id);
+    assert.strictEqual(removido.id, novo.id);
+
+    const posRemocao = getSpinsPassesConfig();
+    assert.ok(!posRemocao.produtos.some(p => p.id === novo.id));
 });
 
 // Cleanup: restaura fielmente o estado original pré-teste

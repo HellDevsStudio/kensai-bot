@@ -1,4 +1,11 @@
 const { 
+    listarProdutosSpins, 
+    formatarPrecoProduto, 
+    adicionarProdutoSpins, 
+    removerProdutoSpins, 
+    atualizarPrecoSpins 
+} = require('./spinsManager');
+const { 
     ActionRowBuilder, 
     ButtonBuilder, 
     ButtonStyle, 
@@ -304,40 +311,51 @@ function gerarPainelSpinsConfig(statusNotice) {
     const spn = getSpinsPassesConfig();
     const produtos = spn.produtos || [];
 
-    function formatPreco(p) {
-        if (typeof p.preco === 'number') return 'R$ ' + p.preco.toFixed(2).replace('.', ',');
-        const n = parseFloat(String(p.preco).replace(',', '.'));
-        if (!isNaN(n)) return 'R$ ' + n.toFixed(2).replace('.', ',');
-        return String(p.preco || 'A Combinar');
-    }
+    const spins = produtos.filter(p => p.tipo === 'spin');
+    const passes = produtos.filter(p => p.tipo === 'passe');
 
-    const tabelaPrecos = produtos.map(p => '• ' + (p.emoji || '🌀') + ' **' + p.nome + ':** `' + formatPreco(p) + '`').join('\n');
+    let tabelaSpins = spins.length > 0
+        ? spins.map(p => '• ' + (p.emoji || '🌀') + ' **' + p.nome + ':** `' + formatarPrecoProduto(p.preco) + '`').join('\n')
+        : '*(Nenhum pacote de spins cadastrado)*';
+
+    let tabelaPasses = passes.length > 0
+        ? passes.map(p => '• ' + (p.emoji || '🎟️') + ' **' + p.nome + ':** `' + formatarPrecoProduto(p.preco) + '`').join('\n')
+        : '*(Nenhum passe cadastrado)*';
 
     const embed = criarEmbedPadrao('⚙️ Configuração • Spins & Passes')
         .setDescription(
             (statusNotice ? statusNotice + '\n\n' : '') +
-            'Configure os parâmetros de venda, preços individuais e canais de **Spins e Passes**:\n\n' +
+            'Gerencie pacotes de **Spins e Passes**, adicione ou remova itens e configure os canais de atendimento:\n\n' +
             '📁 **Categoria Atual:** ' + (spn.categoria_id ? '<#' + spn.categoria_id + '>' : '❌ *Não configurada*') + '\n' +
             '📜 **Canal de Logs Atual:** ' + (spn.canal_logs_id ? '<#' + spn.canal_logs_id + '>' : '❌ *Não configurado*') + '\n' +
             '🛡️ **Cargo Staff Atual:** ' + (spn.cargo_staff_id ? '<@&' + spn.cargo_staff_id + '>' : '❌ *Não configurado*') + '\n' +
             '🔑 **Chave Pix Oficial:** `' + (spn.chave_pix || 'kensai.store.oficial@gmail.com') + '`\n\n' +
-            '💵 **Preços Atuais Configurados:**\n' + tabelaPrecos + '\n\n' +
-            '💡 *Selecione qualquer item no primeiro menu abaixo para alterar o preço dele!*'
+            '🌀 **Pacotes de Spins:**\n' + tabelaSpins + '\n\n' +
+            '🎟️ **Passes & Gamepasses:**\n' + tabelaPasses + '\n\n' +
+            '💡 *Use os botões abaixo para colocar novos itens, remover existentes ou alterar preços:*'
         )
-        .setFooter({ text: 'Kensai Store • Gestão de Spins & Passes' });
+        .setFooter({ text: 'Kensai Store • Gestão Completa de Spins & Passes' });
 
-    const selectPrecos = new StringSelectMenuBuilder()
-        .setCustomId('cfg_sel_spins_change_price')
-        .setPlaceholder('💵 Selecione um item para alterar o preço...')
-        .addOptions(produtos.map(p => ({
-            label: p.nome.substring(0, 50),
-            value: p.id,
-            description: ('Preço atual: ' + formatPreco(p)).substring(0, 50),
-            emoji: p.emoji || (p.tipo === 'spin' ? '🌀' : '🎟️')
-        })));
+    // Linha 1: Ações de Catálogo (Adicionar, Remover, Alterar Preço)
+    const rowAcoesCatalogo = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_add')
+            .setLabel('Adicionar Item')
+            .setEmoji('➕')
+            .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_rem_mode')
+            .setLabel('Remover Item')
+            .setEmoji('🗑️')
+            .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+            .setCustomId('cfg_btn_spins_price_mode')
+            .setLabel('Alterar Preço')
+            .setEmoji('💵')
+            .setStyle(ButtonStyle.Primary)
+    );
 
-    const rowPreco = new ActionRowBuilder().addComponents(selectPrecos);
-
+    // Linha 2: Categoria
     const rowCat = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
             .setCustomId('cfg_sel_spins_cat')
@@ -345,6 +363,7 @@ function gerarPainelSpinsConfig(statusNotice) {
             .setChannelTypes(ChannelType.GuildCategory)
     );
 
+    // Linha 3: Logs
     const rowLogs = new ActionRowBuilder().addComponents(
         new ChannelSelectMenuBuilder()
             .setCustomId('cfg_sel_spins_logs')
@@ -352,12 +371,14 @@ function gerarPainelSpinsConfig(statusNotice) {
             .setChannelTypes(ChannelType.GuildText)
     );
 
+    // Linha 4: Cargo Staff
     const rowRole = new ActionRowBuilder().addComponents(
         new RoleSelectMenuBuilder()
             .setCustomId('cfg_sel_spins_role')
             .setPlaceholder('🛡️ Selecione o Cargo da Staff de Spins/Passes...')
     );
 
+    // Linha 5: Enviar Painel & Voltar
     const rowBotoes = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
             .setCustomId('cfg_send_panel_spins')
@@ -371,7 +392,93 @@ function gerarPainelSpinsConfig(statusNotice) {
             .setStyle(ButtonStyle.Secondary)
     );
 
-    return { embeds: [embed], components: [rowPreco, rowCat, rowLogs, rowRole, rowBotoes] };
+    return { embeds: [embed], components: [rowAcoesCatalogo, rowCat, rowLogs, rowRole, rowBotoes] };
+}
+
+/**
+ * 4.2 Tela para Remover Item do Painel de Spins & Passes
+ */
+function gerarPainelSpinsRemover(statusNotice) {
+    const spn = getSpinsPassesConfig();
+    const produtos = spn.produtos || [];
+
+    const embed = criarEmbedPadrao('🗑️ Remover Item • Spins & Passes')
+        .setDescription(
+            (statusNotice ? statusNotice + '\n\n' : '') +
+            'Selecione no menu abaixo o pacote ou passe que deseja **remover do catálogo**:\n\n' +
+            (produtos.length > 0
+                ? produtos.map(p => '• ' + (p.emoji || '🌀') + ' **' + p.nome + ':** `' + formatarPrecoProduto(p.preco) + '`').join('\n')
+                : '⚠️ *Nenhum item cadastrado no momento.*')
+        )
+        .setFooter({ text: 'O item será excluído e o painel público será sincronizado na hora' });
+
+    const components = [];
+    if (produtos.length > 0) {
+        const selectRemover = new StringSelectMenuBuilder()
+            .setCustomId('cfg_sel_spins_delete_item')
+            .setPlaceholder('🗑️ Selecione o item que deseja excluir...')
+            .addOptions(produtos.map(p => ({
+                label: p.nome.substring(0, 50),
+                value: p.id,
+                description: ('Preço: ' + formatarPrecoProduto(p.preco)).substring(0, 50),
+                emoji: '🗑️'
+            })));
+        components.push(new ActionRowBuilder().addComponents(selectRemover));
+    }
+
+    const rowVoltar = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_nav_spins')
+            .setLabel('Cancelar e Voltar')
+            .setEmoji('⬅️')
+            .setStyle(ButtonStyle.Secondary)
+    );
+    components.push(rowVoltar);
+
+    return { embeds: [embed], components };
+}
+
+/**
+ * 4.3 Tela para Selecionar Item e Alterar Preço
+ */
+function gerarPainelSpinsPreco(statusNotice) {
+    const spn = getSpinsPassesConfig();
+    const produtos = spn.produtos || [];
+
+    const embed = criarEmbedPadrao('💵 Alterar Preço • Spins & Passes')
+        .setDescription(
+            (statusNotice ? statusNotice + '\n\n' : '') +
+            'Selecione no menu abaixo o item que deseja atualizar o preço de venda:\n\n' +
+            (produtos.length > 0
+                ? produtos.map(p => '• ' + (p.emoji || '🌀') + ' **' + p.nome + ':** `' + formatarPrecoProduto(p.preco) + '`').join('\n')
+                : '⚠️ *Nenhum item cadastrado no momento.*')
+        )
+        .setFooter({ text: 'Ao selecionar, abrirá o formulário para você definir o novo preço' });
+
+    const components = [];
+    if (produtos.length > 0) {
+        const selectPreco = new StringSelectMenuBuilder()
+            .setCustomId('cfg_sel_spins_change_price')
+            .setPlaceholder('💵 Selecione o item para alterar o preço...')
+            .addOptions(produtos.map(p => ({
+                label: p.nome.substring(0, 50),
+                value: p.id,
+                description: ('Preço atual: ' + formatarPrecoProduto(p.preco)).substring(0, 50),
+                emoji: p.emoji || (p.tipo === 'spin' ? '🌀' : '🎟️')
+            })));
+        components.push(new ActionRowBuilder().addComponents(selectPreco));
+    }
+
+    const rowVoltar = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('cfg_nav_spins')
+            .setLabel('Voltar')
+            .setEmoji('⬅️')
+            .setStyle(ButtonStyle.Secondary)
+    );
+    components.push(rowVoltar);
+
+    return { embeds: [embed], components };
 }
 
 /**
@@ -536,6 +643,67 @@ async function handleConfigInteraction(interaction) {
         const roleId = interaction.values[0];
         setSpinsPassesConfig({ cargo_staff_id: roleId });
         return interaction.update(gerarPainelSpinsConfig('✅ **Cargo da Staff de Spins & Passes atualizado para <@&' + roleId + '>!**'));
+    }
+    if (cid === 'cfg_btn_spins_rem_mode') {
+        return interaction.update(gerarPainelSpinsRemover());
+    }
+    if (cid === 'cfg_btn_spins_price_mode') {
+        return interaction.update(gerarPainelSpinsPreco());
+    }
+    if (cid === 'cfg_btn_spins_add') {
+        const modal = new ModalBuilder()
+            .setCustomId('modal_spins_add_item')
+            .setTitle('Adicionar Pacote de Spin ou Passe');
+
+        const inputNome = new TextInputBuilder()
+            .setCustomId('input_spins_nome')
+            .setLabel('Nome do Pacote ou Passe:')
+            .setPlaceholder('Ex: 2.000 Spins ou Passe VIP')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const inputTipo = new TextInputBuilder()
+            .setCustomId('input_spins_tipo')
+            .setLabel('Tipo ("spin" ou "passe"):')
+            .setPlaceholder('spin ou passe')
+            .setValue('spin')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const inputPreco = new TextInputBuilder()
+            .setCustomId('input_spins_preco')
+            .setLabel('Preço em R$ (ou A Combinar):')
+            .setPlaceholder('Ex: 25.00 ou A Combinar')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const inputEmoji = new TextInputBuilder()
+            .setCustomId('input_spins_emoji')
+            .setLabel('Emoji (opcional):')
+            .setPlaceholder('Ex: 🌀 ou 🎟️')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false);
+
+        const inputDesc = new TextInputBuilder()
+            .setCustomId('input_spins_desc')
+            .setLabel('Descrição curta (opcional):')
+            .setPlaceholder('Ex: Pacote especial com entrega imediata')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false);
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(inputNome),
+            new ActionRowBuilder().addComponents(inputTipo),
+            new ActionRowBuilder().addComponents(inputPreco),
+            new ActionRowBuilder().addComponents(inputEmoji),
+            new ActionRowBuilder().addComponents(inputDesc)
+        );
+        return interaction.showModal(modal);
+    }
+    if (cid === 'cfg_sel_spins_delete_item') {
+        const prodId = interaction.values[0];
+        const removido = await removerProdutoSpins(interaction.guild, prodId);
+        return interaction.update(gerarPainelSpinsConfig(removido ? '🗑️ **Item "' + removido.nome + '" removido com sucesso do painel!**' : '❌ Item não encontrado.'));
     }
     if (cid === 'cfg_sel_spins_change_price') {
         const prodId = interaction.values[0];
@@ -716,7 +884,28 @@ async function handleConfigInteraction(interaction) {
         });
     }
 
-    // H. MODAL SUBMIT (SPINS & PASSES PRICE)
+    // H.1 MODAL SUBMIT (ADICIONAR ITEM SPINS & PASSES)
+    if (cid === 'modal_spins_add_item') {
+        const nome = interaction.fields.getTextInputValue('input_spins_nome');
+        const tipo = interaction.fields.getTextInputValue('input_spins_tipo');
+        const preco = interaction.fields.getTextInputValue('input_spins_preco');
+        let emoji = '';
+        let descricao = '';
+        try { emoji = interaction.fields.getTextInputValue('input_spins_emoji'); } catch(e){}
+        try { descricao = interaction.fields.getTextInputValue('input_spins_desc'); } catch(e){}
+
+        const novo = await adicionarProdutoSpins(interaction.guild, { nome, tipo, preco, emoji, descricao });
+        const precoFormatado = formatarPrecoProduto(novo.preco);
+        return interaction.reply({
+            content: '✅ **' + novo.nome + '** adicionado com sucesso ao painel de Spins & Passes!\n\n' +
+                     '• **Tipo:** `' + (novo.tipo === 'spin' ? '🌀 Spin' : '🎟️ Passe') + '`\n' +
+                     '• **Preço:** `' + precoFormatado + '`\n\n' +
+                     '🔄 *O painel público e dropdown foram atualizados automaticamente.*',
+            flags: [MessageFlags.Ephemeral]
+        });
+    }
+
+    // H.2 MODAL SUBMIT (SPINS & PASSES PRICE)
     if (cid.startsWith('modal_spins_price_')) {
         const prodId = cid.replace('modal_spins_price_', '');
         const rawPreco = interaction.fields.getTextInputValue('input_novo_preco').trim();
@@ -768,6 +957,8 @@ module.exports = {
     gerarPainelItensConfig,
     gerarPainelDespachoPaineis,
     gerarPainelSpinsConfig,
+    gerarPainelSpinsRemover,
+    gerarPainelSpinsPreco,
     gerarModalConfigTokens,
     handleConfigInteraction
 };
